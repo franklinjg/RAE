@@ -1,0 +1,146 @@
+import numpy as np
+from scipy.special import comb
+from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+
+# Set the seed for reproducibility
+np.random.seed(4862)
+
+# Constants
+n = 20  # Number of legislators
+Psi = 0.10
+X = 5.0
+q = 0.5
+vmax = 1.0
+phi_values = np.linspace(0, 1.15, 100)  # Varying phi from 0 to 1.68
+
+# Function to generate an adjusted matrix G
+def generate_adjusted_matrix(n):
+    G = np.zeros((n, n))
+    possible_values = [0.5, -0.5, 1, 0]
+    for i in range(n):
+        row_sum = 0
+        for j in range(n):
+            if i == j:
+                continue
+            if j == n - 1:
+                G[i, j] = 1 - row_sum
+            else:
+                value = np.random.choice(possible_values)
+                if row_sum + value > 1 or (j == n - 2 and row_sum + value + 0.5 > 1):
+                    value = 1 - row_sum - 0.5 if np.random.rand() > 0.5 else 0
+                G[i, j] = value
+                row_sum += value
+    return G
+
+# Function to generate and save a diagonal matrix V
+def generate_and_save_diagonal_matrix(n):
+    possible_values_diagonal = [-1, 1, 0.5, -0.5]
+    V = np.zeros((n, n))
+    for i in range(n):
+        V[i, i] = np.random.choice(possible_values_diagonal)
+    filename = f'V{n}.npy'
+    np.save(filename, V)
+    v_elements = np.diag(V)
+    v_dict = {f'v{i+1}': v_elements[i] for i in range(n)}
+    return V, filename, v_dict
+
+# Generate adjusted matrix G and diagonal matrix V
+Gn = generate_adjusted_matrix(n)
+V, filename, v_dict = generate_and_save_diagonal_matrix(n)
+
+# Function to calculate pivotal probabilities
+def calculate_pivotal_probabilities(x):
+    n = len(x)
+    pivotal_probs = np.zeros(n)
+    for i in range(n):
+        others = np.concatenate((x[:i], x[i+1:]))
+        for j in range(n//2):
+            pivotal_probs[i] += comb(n - 1, j) * np.prod(others[:j]) * np.prod(1 - others[j:])
+    return pivotal_probs / (2**(n - 1))
+
+# Function to solve the system for x*
+def solve_system(v, phi, Psi, Gn, pivotal_prob_func, tolerance=1e-6, max_iterations=1000):
+    n = len(v)
+    x = np.full(n, 0.5)  # Initial guess
+    for iteration in range(max_iterations):
+        pivotal_probs = pivotal_prob_func(x)
+        x_new = np.empty(n)
+        for i in range(n):
+            sum_gx = sum(Gn[i, j] * (1 - x[j]) for j in range(n))
+            x_new[i] = q + Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx
+        
+        if np.allclose(x, x_new, atol=tolerance):
+            return x  # Converged
+        x = x_new  # Update x for the next iteration
+
+    raise ValueError("The system did not converge within the maximum number of iterations")
+
+# Now, when calling the function, pass the correct number of arguments:
+for phi in phi_values:
+    phistar = 2 * Psi * phi
+    v_values = np.array([v_dict[f'v{i+1}'] for i in range(n)])
+    x_star = solve_system(v_values, phi, Psi, Gn, calculate_pivotal_probabilities)
+
+# Function to compute the Jacobian matrix
+def compute_jacobian(x, pivotal_prob_func, h=1e-5):
+    n = len(x)
+    jacobian = np.zeros((n, n))
+    for i in range(n):
+        for j in range(n):
+            x1 = x.copy()
+            x2 = x.copy()
+            x1[j] -= h / 2
+            x2[j] += h / 2
+            f1 = pivotal_prob_func(x1)
+            f2 = pivotal_prob_func(x2)
+            jacobian[i, j] = (f2[i] - f1[i]) / h
+    return jacobian
+
+# Analysis for varying phi
+transfer_results = {0: [], 4: [], 9: [], 14: [], 19: []}
+for phi in phi_values:
+    phistar = 2 * Psi * phi  # Compute phistar for the current phi
+    v_values = np.array([v_dict[f'v{i+1}'] for i in range(n)])
+    x_star = solve_system(v_values, phi, Psi, Gn, calculate_pivotal_probabilities)
+    jacobian_matrix = compute_jacobian(x_star, calculate_pivotal_probabilities, h=1e-5)
+
+
+    I = np.eye(n)
+    V_diag = np.diag(V)
+    matrix_inside_brackets = I - (phistar * Gn.T + Psi * np.diag(V_diag))
+    inverted_matrix = np.linalg.inv(matrix_inside_brackets)
+    b_M = inverted_matrix.dot(np.ones(n))  # Katz-Bonacich centrality vector
+
+    # Define the objective function for the optimization
+    def objective_function(s, b_M):
+        return -np.sum(b_M * np.log(s))
+
+    # Constraints and bounds for the optimization
+    constraints = ({'type': 'eq', 'fun': lambda s: np.sum(s) - X})
+    bounds = [(1e-5, None) for _ in range(n)]
+    initial_s = np.full(n, X / n)  # Initial guess for the values of s
+
+    # Run the optimization algorithm to find the optimal vector of transfers
+    result = minimize(objective_function, initial_s, args=(b_M), bounds=bounds, constraints=constraints)
+
+    if result.success:
+        s_optimal = result.x
+        print(f"Optimal transfers for phi={phi}: {s_optimal}")
+        
+        # Store the results for specific nodes
+        for node in transfer_results.keys():
+            transfer_results[node].append(s_optimal[node])
+    else:
+        raise ValueError("Optimization failed to converge")
+
+# Plotting the results
+plt.figure(figsize=(10, 8))
+for node, transfers in transfer_results.items():
+    plt.plot(phi_values, transfers, label=f'Node {node+1}')
+plt.xlabel('Phi')
+plt.ylabel('Optimal Transfer Amount')
+plt.title('Optimal Transfers vs Phi')
+plt.legend()
+plt.grid(True)
+plt.show()
