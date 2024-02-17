@@ -1,0 +1,79 @@
+
+
+import numpy as np
+import pandas as pd
+import networkx as nx
+
+np.random.seed(4862)
+
+# Constants
+phi = 0.20
+Psi = 0.10
+X = 5.0
+q = 0.5
+phistar = 2 * Psi * phi
+vmax = 1.0
+n = 20  # Number of legislators
+
+def generate_adjusted_matrix(n):
+    """Generates an adjusted matrix G with row sums equal to 1."""
+    G = np.zeros((n, n))
+    possible_values = [0.5, -0.5, 1, 0]
+    
+    for i in range(n):
+        row_sum = 0
+        for j in range(n):
+            if i == j:
+                continue
+            if j == n - 1:
+                G[i, j] = 1 - row_sum
+            else:
+                value = np.random.choice(possible_values)
+                if row_sum + value > 1 or (j == n - 2 and row_sum + value + 0.5 > 1):
+                    value = 1 - row_sum - 0.5 if np.random.rand() > 0.5 else 0
+                G[i, j] = value
+                row_sum += value
+                
+    return G
+
+Gn = generate_adjusted_matrix(n)
+G = nx.from_numpy_array(Gn, create_using=nx.DiGraph)  # Use from_numpy_array if from_numpy_matrix gives an error
+
+# Calculate statistics
+def network_summary(graph):
+    summary = {
+        'Number of Nodes': graph.number_of_nodes(),
+        'Number of Edges': graph.number_of_edges(),
+        'Average Degree': np.mean([degree for node, degree in graph.degree()]),
+        'Graph Density': nx.density(graph),
+        'Average Clustering Coefficient': nx.average_clustering(graph.to_undirected()),
+        'Connected Components': nx.number_weakly_connected_components(graph)
+    }
+
+    # Shortest path calculations require a connected graph
+    if nx.is_weakly_connected(graph):
+        summary['Average Shortest Path Length'] = nx.average_shortest_path_length(graph)
+        summary['Diameter'] = nx.diameter(graph.to_undirected())
+    else:
+        summary['Average Shortest Path Length'] = 'N/A (Graph not connected)'
+        summary['Diameter'] = 'N/A (Graph not connected)'
+
+    return summary
+
+# Generate summary
+summary_stats = network_summary(G)
+
+# Centrality measures
+summary_stats['Degree Centrality'] = nx.degree_centrality(G)
+summary_stats['Closeness Centrality'] = nx.closeness_centrality(G)
+summary_stats['Betweenness Centrality'] = nx.betweenness_centrality(G)
+summary_stats['Eigenvector Centrality'] = nx.eigenvector_centrality_numpy(G)
+
+# Convert to DataFrame for nicer display
+summary_df = pd.DataFrame.from_dict(summary_stats, orient='index', columns=['Value'])
+
+# Display the summary table
+print(summary_df)
+
+# Save the table to a CSV file if needed
+summary_df.to_csv('network_summary.csv')
