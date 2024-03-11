@@ -25,6 +25,9 @@ from scipy.optimize import minimize
 from scipy.special import comb
 import matplotlib.pyplot as plt
 import networkx as nx
+import multiprocessing
+from multiprocessing import Pool
+
 
 
 np.random.seed(4862)
@@ -42,7 +45,7 @@ vmax = 1.0                 # This is the maximum value of the diagonal elements 
 
 # Number of Legislators. Depending on your computer this code will be able to run for a large n. 
 
-n = 100
+n = 70
 
 ############################################################################################################################################################################
 
@@ -50,26 +53,31 @@ n = 100
 This section generates the network of legislators. The network is generated using the NetworkX library. 
 """
  
-def generate_adjusted_matrix(n):                # This function generates an n x n matrix G with the sum of each row equal to 1. This is an assumption I made in my paper. 
-    G = np.zeros((n, n))                        # This creates a matrix of zeros with size n x n
-    
-    possible_values = [0.5, -0.5, 1, 0]         # This defines possible values for the matrix entries. Assumption made in my paper. 
-    
-    for i in range(n):                          # Loop over each row of the matrix
-        row_sum = 0                             # Initialise sum of the current row
-        for j in range(n):                      # Loop over each column in the current row
-            if i == j:
-                continue                        # This skips diagonal elements
-            if j == n - 1:  
-                G[i, j] = 1 - row_sum           # This adjusts the last element in the row to ensure the sum is 1
-            else:                               # Randomly choose a value from the possible values
-                value = np.random.choice(possible_values)           
-                if row_sum + value > 1 or (j == n - 2 and row_sum + value + 0.5 > 1):   # This ensures the row sum does not exceed 1
-                    value = 1 - row_sum - 0.5 if np.random.rand() > 0.5 else 0
-                G[i, j] = value                  # Assign the chosen value to the matrix
-                row_sum += value                 # Updates the row sum
 
-    return G
+def generate_row(args):
+    i, n, possible_values = args
+    np.random.seed(i)  # Seed based on row for reproducibility
+    row = np.zeros(n)
+    row_sum = 0
+    for j in range(n):
+        if i == j:
+            continue  # Skip diagonal
+        if j == n - 1:
+            row[j] = 1 - row_sum  # Adjust last element
+        else:
+            value = np.random.choice(possible_values)
+            if row_sum + value > 1 or (j == n - 2 and row_sum + value + 0.5 > 1):
+                value = 1 - row_sum - 0.5 if np.random.rand() > 0.5 else 0
+            row[j] = value
+            row_sum += value
+    return row
+
+def generate_adjusted_matrix(n):
+    possible_values = [0.5, -0.5, 1, 0]
+    args = [(i, n, possible_values) for i in range(n)]
+    with Pool() as pool:
+        matrix = pool.map(generate_row, args)
+    return np.array(matrix)
 
 def store_matrix_entries(matrix):
     stored_entries = {}
@@ -183,14 +191,27 @@ print("Does Assumption 2 hold? :", assumption_2_holds)
 ############################################################################################################################################################################
 
 # Define the solve_system function
+import numpy as np
+from scipy.special import comb
+
 def calculate_pivotal_probabilities(x):
     n = len(x)
     pivotal_probs = np.zeros(n)
+    # Pre-compute the combinatorial parts as they don't depend on 'i'
+    comb_precomputed = np.array([comb(n - 1, j) for j in range(n // 2)])
+    
+    # Convert x to a numpy array for efficient element-wise operations
+    x = np.array(x)
+    
     for i in range(n):
         others = np.concatenate((x[:i], x[i+1:]))
         for j in range(n//2):
-            pivotal_probs[i] += comb(n - 1, j) * np.prod(others[:j]) * np.prod(1 - others[j:])
+            # Use numpy's broadcasting and vectorized operations
+            prob_product = np.prod(others[:j]) * np.prod(1 - others[j:])
+            pivotal_probs[i] += comb_precomputed[j] * prob_product
+    
     return pivotal_probs / (2**(n - 1))
+
 
 # Define the solve_system function
 
@@ -219,22 +240,28 @@ def solve_system(v, phi, Psi, Gn, pivotal_prob_func, tolerance=1e-6, max_iterati
     raise ValueError("The system did not converge within the maximum number of iterations") # If this doesn't work then increase the maximum number of iterations.
 
 
+def jacobian_element(args):
+    x, pivotal_prob_func, h, i, j = args
+    x1 = x.copy()
+    x2 = x.copy()
+    x1[j] -= h / 2
+    x2[j] += h / 2
+    f1 = pivotal_prob_func(x1)
+    f2 = pivotal_prob_func(x2)
+    return (f2[i] - f1[i]) / h
 
-# Define the compute_jacobian function
 def compute_jacobian(x, pivotal_prob_func, h=1e-5):
     n = len(x)
     jacobian = np.zeros((n, n))
+    args = [(x, pivotal_prob_func, h, i, j) for i in range(n) for j in range(n)]
     
-    for i in range(n):
-        for j in range(n):
-            x1 = x.copy()
-            x2 = x.copy()
-            x1[j] -= h/2
-            x2[j] += h/2
-            f1 = pivotal_prob_func(x1)
-            f2 = pivotal_prob_func(x2)
-            jacobian[i, j] = (f2[i] - f1[i]) / h
-
+    with Pool(processes=multiprocessing.cpu_count()) as pool:
+        results = pool.map(jacobian_element, args)
+    
+    for k, result in enumerate(results):
+        i, j = divmod(k, n)
+        jacobian[i, j] = result
+    
     return jacobian
 
 

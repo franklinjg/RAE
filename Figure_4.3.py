@@ -6,7 +6,7 @@ from scipy.special import comb
 np.random.seed(4862)
 
 # Constants and Psi value
-n = 20
+n = 40
 Psi = 0.10  # Psi is now constant
 X = 5.0
 q = 0.5
@@ -56,7 +56,7 @@ def calculate_pivotal_probabilities(x, n, Psi):
 # Function to solve the system for x*
 def solve_system(n, phi, Psi, Gn):
     x = np.full(n, 0.5)  # Initial guess
-    for _ in range(1000):  # Max iterations
+    for _ in range(9999):  # Max iterations
         pivotal_probs = calculate_pivotal_probabilities(x, n, Psi)
         x_new = np.array([q + phistar(phi, Psi) * sum(Gn[i, :] * (1 - x)) for i in range(n)])
         if np.allclose(x, x_new, atol=1e-6):
