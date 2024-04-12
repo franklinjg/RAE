@@ -1,0 +1,36 @@
+import pyreadr
+import numpy as np
+
+# Load the R data file
+result = pyreadr.read_r("/Users/franklingonzalez/Desktop/RAE/Influencing Connected Legislators (Data)/G_party.rda")
+
+# Assuming 'G_party' is the key for the data in the .rda file
+G_party = result['G_party']
+
+# Extract the 429x429 block from the DataFrame and convert it to a numpy matrix
+G = G_party.iloc[0:429, 0:429].values
+
+# Transpose the numpy matrix G
+G_transpose = G.T
+
+def store_matrix_entries(matrix):
+    stored_entries = {}
+    n = matrix.shape[0]
+    for i in range(n):
+        for j in range(n):
+            identifier = f"g_{i+1}{j+1}"
+            # Access numpy array elements using standard indexing
+            stored_entries[identifier] = matrix[i, j]
+    return stored_entries
+
+# Storing matrix entries in a dictionary from the extracted block
+entries_dict = store_matrix_entries(G)
+
+# Output some data to verify the functionality
+print("Stored entries dictionary example:")
+for key, value in list(entries_dict.items())[:10]:  # Print first 10 entries
+    print(key, value)
+
+print("Shape of the original matrix block G:", G.shape)
+print("Shape of the transposed matrix G_transpose:", G_transpose.shape)
+
