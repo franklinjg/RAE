@@ -258,11 +258,11 @@ for Psi in Psi_values:
 
 
 plt.figure(figsize=(10, 5))
-plt.plot(phi_values, hundredth_entries, label='100th Entry')
-plt.plot(phi_values, two_hundredth_entries, label='200th Entry')
-plt.xlabel('Phi')
+plt.plot(Psi_values, hundredth_entries, label='100th Entry')
+plt.plot(Psi_values, two_hundredth_entries, label='200th Entry')
+plt.xlabel('Psi')
 plt.ylabel('Entry Value')
-plt.title('100th and 200th Entries of b_M_array vs. Phi')
+plt.title('100th and 200th Entries of b_M_array vs. Psi')
 plt.legend()
 plt.grid(True)
 plt.show()
