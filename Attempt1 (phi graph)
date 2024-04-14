@@ -1,0 +1,258 @@
+"""
+Necessary Libraries for Analysis Replication:
+-----------------------------------------------------
+To replicate my analysis, the libraries used in this code must be installed. If you encounter any issues with the installations, execute the following commands in your terminal:
+
+For Python 2.x:
+    pip install "library_name"
+
+For Python 3.x:
+    pip3 install "library_name"
+
+Seed for Reproducibility:
+-----------------------------------------------------
+The random seed is set to 4862 to ensure that the results are reproducible. It's important to note that setting a fixed seed is not the most efficient approach for achieving randomness. The fixed seed is used here only to meet a specific requirement. For scenarios involving large numbers, consider utilizing quasi-random number generators, as they provide a more evenly distributed sequence of numbers and actively prevent clustering.
+
+Special thanks to my friend Nishanth for his helpful comments. P.D. My code does not comply with PEP 8 standards. I am aware of this and I am working on it.
+"""
+
+
+import numpy as np
+import pandas as pd
+from sympy import Matrix
+import scipy.io
+from scipy.optimize import minimize
+from scipy.special import comb, logsumexp
+import matplotlib.pyplot as plt
+import networkx as nx
+import requests
+import pyreadr
+import os
+import tempfile
+from scipy.linalg import solve  
+
+
+
+np.random.seed(4862)
+
+# Arrays to store the results
+hundredth_entries = []
+two_hundredth_entries = []
+
+
+############################################################################################################################################################################
+
+# Generating the constants and storing them 
+
+phi_values = np.linspace(0.1, 1.19, 100) 
+Psi = 0.10                 # This is the densitiy of the epsilon terms which is used in the computation of the pivotal probabilities.
+X = 50.0                    # This is the budget of the interest groups which is used in the computation of the optimal transfers.
+q = 0.5                    # This is the value of q which is used in the computation of the pivotal probabilities. (q-rule).      
+      # This is the value of phi* which is used in the computation of the Katz-Bonacich centrality vector.
+vmax = 1.0                 # This is the maximum value of the diagonal elements of the matrix V.
+
+def phistar(phi, Psi):
+    return 2 * Psi * phi
+
+
+
+
+# Number of Legislators. Depending on your computer this code will be able to run for a large n. 
+
+n = 429
+
+############################################################################################################################################################################
+
+"""
+This section generates the network of legislators. The network is generated using the NetworkX library. 
+"""
+
+
+def store_matrix_entries(matrix):
+    stored_entries = {}
+    n = matrix.shape[0]
+    for i in range(n):
+        for j in range(n):
+            identifier = f"g_{i+1}{j+1}"
+            stored_entries[identifier] = matrix[i, j]
+    return stored_entries
+
+# URL of the raw R data file on GitHub
+url = 'https://raw.githubusercontent.com/franklinjg/RAE/29da2338741e37a621442490179455c570402bf4/G_party.rda'
+
+# Make a request to get the content of the .rda file
+response = requests.get(url)
+if response.status_code == 200:
+    # Create a temporary file
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_file.write(response.content)
+        tmp_file_path = tmp_file.name
+
+    # Read the R data file from the temporary file
+    result = pyreadr.read_r(tmp_file_path)
+
+    # Optionally delete the temporary file if you're done with it
+    os.remove(tmp_file_path)
+
+    # Now you can use 'result' as a normal result object from pyreadr
+    print(result.keys())  # For example, to print the keys of the loaded R data
+
+    # Assuming 'G_party' is the key for the data in the .rda file
+    G_party = result['G_party']
+
+    # Extract the 429x429 block from the DataFrame and convert it to a numpy matrix
+    Gn = G_party.iloc[0:429, 0:429].values
+
+    # Transpose the numpy matrix G
+    G_transpose = Gn.T
+
+    # Storing matrix entries in a dictionary from the extracted block
+    entries_dict = store_matrix_entries(Gn)
+else:
+    print("Failed to fetch the file: Status code", response.status_code)
+
+############################################################################################################################################################################
+
+# Function to generate an n x n diagonal matrix V and save the diagonal elements as v1, v2, ..., vn
+def generate_and_save_diagonal_matrix(n):
+    # Define the possible values for the diagonal elements
+    possible_values_diagonal = [-1, 1, 0.5, -0.5]
+    V = np.zeros((n, n))
+    for i in range(n):
+        V[i, i] = np.random.choice(possible_values_diagonal)
+    filename = f'V{n}.npy'
+    np.save(filename, V)
+    v_elements = np.diag(V)
+    v_dict = {f'v{i+1}': v_elements[i] for i in range(n)}
+    return V, filename, v_dict, v_elements  # Return the diagonal elements as part of the output
+
+# Generate the matrix and get the diagonal values
+V, filename, v_dict, v_values = generate_and_save_diagonal_matrix(n)  # Now v_values is defined
+
+
+# Iterate over each phi value to compute matrices and check invertibility
+for phi in phi_values:
+    # Step 1: Compute the matrix to invert
+    I = np.eye(n)  # Identity matrix of size nxn
+    matrix_to_invert = I - 2 * phi * Psi * Gn
+
+    # Step 2: Check if the matrix is invertible (determinant is not zero)
+    is_invertible = np.linalg.det(matrix_to_invert) != 0
+
+    # Step 3: If invertible, compute the inverse and the Katz-Bonacich vector
+    if is_invertible:
+        inverse_matrix = np.linalg.inv(matrix_to_invert)
+        # Step 4: Multiply the inverse by a vector of ones
+        katz_bonacich_vector = inverse_matrix.dot(np.ones(n))
+        # Step 5: Check if all elements of the resulting vector are positive
+        all_positive = np.all(katz_bonacich_vector > 0)
+    else:
+        all_positive = False  # If the matrix is not invertible, the assumption does not hold
+
+    # Result
+    assumption_2_holds = is_invertible and all_positive
+    print(f"Phi: {phi}, Does Assumption 2 hold?: {assumption_2_holds}")
+
+############################################################################################################################################################################
+
+# Assumption 3 is always satisfied. 
+
+############################################################################################################################################################################
+
+# Define the function to calculate pivotal probabilities
+def calculate_pivotal_probabilities(x):
+    half_n = (len(x) - 1) // 2
+    pivotal_probs = np.zeros(len(x))
+    epsilon = 1e-10
+    log_comb = np.array([np.log(comb(len(x) - 1, j)) for j in range(half_n)])
+    
+    for i in range(len(x)):
+        others = np.concatenate((x[:i], x[i+1:]))
+        others = np.clip(others, epsilon, 1 - epsilon)
+        if i != len(x) - 1:
+            log_probs = log_comb + np.log(others[:half_n]) + np.log(1 - others[half_n:])
+        else:
+            log_probs = log_comb + np.log(others[:half_n]) + np.log(1 - others[half_n:])
+        pivotal_probs[i] = np.exp(logsumexp(log_probs))
+
+    return pivotal_probs / (2**(len(x) - 1))
+
+# Define the function to solve the system
+def solve_system(v, phi, Psi, Gn, pivotal_prob_func, tolerance=1e-6, max_iterations=1000):
+    n = len(v)
+    x = np.full(n, 0.5)  # Initial guess
+
+    for iteration in range(max_iterations):
+        pivotal_probs = pivotal_prob_func(x)
+        x_new = np.empty(n)
+        for i in range(n):
+            sum_gx = sum(Gn[i, j] * np.clip(1 - x[j], 1e-10, 1-1e-10) for j in range(n))
+            x_new[i] = np.clip(Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
+
+        if np.allclose(x, x_new, atol=tolerance):
+            return x
+        x = x_new
+
+    raise ValueError("The system did not converge within the maximum number of iterations")
+
+# Define the function to compute the Jacobian
+def compute_jacobian(x, pivotal_prob_func, h=1e-5):
+    n = len(x)
+    jacobian = np.zeros((n, n))
+    f_x = pivotal_prob_func(x)
+    
+    for j in range(n):
+        x1 = x.copy()
+        x2 = x.copy()
+        x1[j] -= h / 2
+        x2[j] += h / 2
+        f1 = pivotal_prob_func(x1)
+        f2 = pivotal_prob_func(x2)
+        jacobian[:, j] = (f2 - f1) / h
+
+    return jacobian
+
+# Loop over each phi and perform calculations
+for phi in phi_values:
+    x_star = solve_system(v_values, phi, Psi, Gn, calculate_pivotal_probabilities)
+    jacobian_matrix = compute_jacobian(x_star, calculate_pivotal_probabilities)
+    transposed_matrixJ = jacobian_matrix.T
+
+    # Optional: Print or store results for each phi
+    print(f"Phi: {phi}, X_star (some entries): {x_star[:5]}, Jacobian (some entries): {jacobian_matrix[0,:5]}")
+
+
+
+
+############################################################################################################################################################################
+
+# Loop over each phi value
+for phi in phi_values:
+    # Calculate the matrix inside the brackets more efficiently
+    matrix_inside_brackets = I - (phistar * G_transpose + Psi * np.diag(transposed_matrixJ - V_diag))
+
+    # Solve the linear system instead of inverting the matrix directly for numerical stability
+    b_M = solve(matrix_inside_brackets, ones_vector)  # Solve the linear system
+
+    print("The Katz-Bonacich centrality vector b_M is:")
+    print(b_M)
+    b_M_array = b_M.flatten()  # Flatten the matrix to a 1D array if needed for further processing
+    print("Matrix as array:")
+    print(b_M_array)
+
+
+ # Store the 100th and 200th entries
+    hundredth_entries.append(b_M_array[99])
+    two_hundredth_entries.append(b_M_array[199])
+
+
+plt.figure(figsize=(10, 5))
+plt.plot(phi_values, hundredth_entries, label='100th Entry')
+plt.plot(phi_values, two_hundredth_entries, label='200th Entry')
+plt.xlabel('Phi')
+plt.ylabel('Entry Value')
+plt.title('100th and 200th Entries of b_M_array vs. Phi')
+plt.legend()
+plt.grid(True)
+plt.show()
+
