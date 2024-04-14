@@ -228,8 +228,11 @@ for phi in phi_values:
 
 # Loop over each phi value
 for phi in phi_values:
+    # Calculate the value from the phistar function
+    phistar_value = phistar(phi, Psi)
+    
     # Calculate the matrix inside the brackets more efficiently
-    matrix_inside_brackets = I - (phistar * G_transpose + Psi * np.diag(transposed_matrixJ - V_diag))
+    matrix_inside_brackets = I - (phistar_value * G_transpose + Psi * np.diag(transposed_matrixJ - V_diag))
 
     # Solve the linear system instead of inverting the matrix directly for numerical stability
     b_M = solve(matrix_inside_brackets, ones_vector)  # Solve the linear system
@@ -240,8 +243,7 @@ for phi in phi_values:
     print("Matrix as array:")
     print(b_M_array)
 
-
- # Store the 100th and 200th entries
+    # Store the 100th and 200th entries
     hundredth_entries.append(b_M_array[99])
     two_hundredth_entries.append(b_M_array[199])
 
