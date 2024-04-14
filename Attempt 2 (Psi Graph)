@@ -159,10 +159,8 @@ for Psi in Psi_values:
 # Assumption 3 is always satisfied. 
 
 ############################################################################################################################################################################
-import numpy as np
-from scipy.special import comb, logsumexp
 
-# Function to calculate pivotal probabilities
+# Define the function to calculate pivotal probabilities
 def calculate_pivotal_probabilities(x):
     half_n = (len(x) - 1) // 2
     pivotal_probs = np.zeros(len(x))
@@ -180,37 +178,31 @@ def calculate_pivotal_probabilities(x):
 
     return pivotal_probs / (2**(len(x) - 1))
 
-# Function to solve the system, now designed to accept variable Psi
-def solve_system(v, phi, Psi, Gn, pivotal_prob_func, tolerance=1e-6, max_iterations=1000):
+def solve_system(v, phi, Psi_values, Gn, pivotal_prob_func, tolerance=1e-6, max_iterations=1000):
     n = len(v)
-    x = np.full(n, 0.5)  # Initial guess
+    results = {}  # Dictionary to store results for each Psi
 
-    for iteration in range(max_iterations):
-        pivotal_probs = pivotal_prob_func(x)
-        x_new = np.empty(n)
-        for i in range(n):
-            sum_gx = sum(Gn[i, j] * np.clip(1 - x[j], 1e-10, 1-1e-10) for j in range(n))
-            x_new[i] = np.clip(Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
+    for Psi in Psi_values:
+        x = np.full(n, 0.5)  # Initial guess for each Psi
+        for iteration in range(max_iterations):
+            pivotal_probs = pivotal_prob_func(x)
+            x_new = np.empty(n)
+            for i in range(n):
+                # Compute the sum of influence for each node using current probabilities
+                sum_gx = sum(Gn[i, j] * np.clip(1 - x[j], 1e-10, 1-1e-10) for j in range(n))
+                # Update each node's probability based on the current Psi
+                x_new[i] = np.clip(Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
 
-        if np.allclose(x, x_new, atol=tolerance):
-            return x
-        x = x_new
+            if np.allclose(x, x_new, atol=tolerance):
+                results[Psi] = x_new
+                break
+            x = x_new
+        else:
+            # If the loop completes without breaking, raise an error for this Psi
+            print(f"Did not converge for Psi: {Psi}")
+            results[Psi] = None
 
-    raise ValueError("The system did not converge within the maximum number of iterations")
-
-# Example usage
-phi = 0.20
-Psi_values = np.arange(0.01, 0.14, 0.01)
-Gn = np.random.rand(429, 429)  # Example G matrix
-v_values = np.random.rand(429)  # Example v values
-
-# Loop over each Psi and perform calculations
-for Psi in Psi_values:
-    try:
-        x_star = solve_system(v_values, phi, Psi, Gn, calculate_pivotal_probabilities)
-        print(f"Results for Psi={Psi:.2f}: {x_star[:5]}")  # Print first 5 entries as example
-    except ValueError as e:
-        print(f"Failed to converge for Psi={Psi:.2f}: {str(e)}")
+    return results
 
 
 # Define the function to compute the Jacobian
@@ -272,11 +264,11 @@ for Psi in Psi_values:
 
 
 plt.figure(figsize=(10, 5))
-plt.plot(phi_values, hundredth_entries, label='100th Entry')
-plt.plot(phi_values, two_hundredth_entries, label='200th Entry')
-plt.xlabel('Phi')
+plt.plot(Psi_values, hundredth_entries, label='100th Entry')
+plt.plot(Psi_values, two_hundredth_entries, label='200th Entry')
+plt.xlabel('Psi')
 plt.ylabel('Entry Value')
-plt.title('100th and 200th Entries of b_M_array vs. Phi')
+plt.title('100th and 200th Entries of b_M_array vs. Psi')
 plt.legend()
 plt.grid(True)
 plt.show()
