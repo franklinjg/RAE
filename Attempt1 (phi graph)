@@ -226,6 +226,12 @@ for phi in phi_values:
 
 ############################################################################################################################################################################
 
+I = np.eye(n)  # Identity matrix of size n x n
+ones_vector = np.ones((n, 1))  # Vector of ones of size n x 1
+V_diag = np.diag(V)  # Diagonal elements of the matrix V
+
+
+
 # Loop over each phi value
 for phi in phi_values:
     # Calculate the value from the phistar function
