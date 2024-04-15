@@ -257,43 +257,52 @@ for Psi in Psi_values:
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
+from scipy.linalg import solve
 
-# Define the objective function outside the loop
+# Assume phi, X, V, Gn, n, and Psi_values are already defined above
+# Also assume that the necessary variables for plotting like x_entries are defined
+
+# Define the objective function to be maximized (negative because minimize() finds the minimum)
 def objective_function(s, b_M):
     return -np.sum(b_M * np.log(s))
 
-# Setup the optimization once if the bounds are constant for all Psi
-bounds = [(1e-5, None)] * n
+# Initialize a dictionary to store the optimal transfers for each Psi for plotting
+optimal_transfers_for_plotting = {i: [] for i in range(n)}  # This assumes you want to plot all n entries
 
-# Loop to calculate b_M and perform optimization
+# Loop over each Psi value to calculate b_M and solve the maximization problem
 for Psi in Psi_values:
-    I = np.eye(n)
-    phistar_value = phistar(Psi)
-    matrix_to_invert = I - phistar_value * Gn
-    is_invertible = np.linalg.det(matrix_to_invert) != 0
+    phistar_value = phistar(Psi)  # Compute phistar for the current Psi
+    matrix_inside_brackets = np.eye(n) - (phistar_value * Gn.T + Psi * np.diag(np.diag(V) - np.ones(n)))
 
-    if is_invertible:
-        inverse_matrix = np.linalg.inv(matrix_to_invert)
-        b_M_array = inverse_matrix.dot(np.ones(n))
-        all_positive = np.all(b_M_array > 0)
+    # Check if the matrix is invertible (determinant is not zero)
+    if np.linalg.det(matrix_inside_brackets) != 0:
+        # Solve the linear system instead of inverting the matrix directly for numerical stability
+        b_M = solve(matrix_inside_brackets, np.ones(n))  # Solve the linear system
+        b_M_array = b_M.flatten()  # Flatten the matrix to a 1D array
 
-        if all_positive:
-            # Constraints and bounds for optimization
-            constraints = {'type': 'eq', 'fun': lambda s: np.sum(s) - X}
-            initial_s = np.full(n, max(X / n, 1e-5))  # Ensure initial guess meets the bounds
+        # Now that we have b_M_array for this Psi, we can run the optimization
+        constraints = {'type': 'eq', 'fun': lambda s: np.sum(s) - X}
+        bounds = [(1e-5, None)] * len(b_M_array)
+        initial_s = np.full(len(b_M_array), X / len(b_M_array))
 
-            # Perform optimization with a more robust method if necessary
-            result = minimize(objective_function, initial_s, args=(b_M_array), method='SLSQP', bounds=bounds, constraints=constraints)
+        # Run the optimization algorithm
+        result = minimize(objective_function, initial_s, args=(b_M_array), bounds=bounds, constraints=constraints)
+
+        if result.success:
+            # Store the optimal vector of transfers for this Psi for plotting
             s_optimal = result.x
+            for i in range(n):
+                optimal_transfers_for_plotting[i].append(s_optimal[i])
+        else:
+            print(f"Optimization failed for Psi = {Psi}")
+    else:
+        print(f"Matrix not invertible for Psi = {Psi}")
 
-            # Store selected entries for plotting
-            for idx in x_entries:
-                x_entries[idx].append(s_optimal[idx])
-
-# Plotting results
+# Plotting results for selected entries
 plt.figure(figsize=(10, 5))
-for idx, values in x_entries.items():
-    plt.plot(Psi_values, values, label=f'Entry {idx}')
+# Assuming x_entries has the indices of the entries you want to plot
+for idx in x_entries.keys():
+    plt.plot(Psi_values, [optimal_transfers_for_plotting[idx][i] for i, Psi in enumerate(Psi_values)], label=f'Entry {idx + 1}')  # idx + 1 because Python is zero-indexed
 plt.xlabel('Psi')
 plt.ylabel('Optimal Transfer')
 plt.title('Optimal Transfers for Selected Entries vs. Psi')
