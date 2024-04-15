@@ -117,7 +117,7 @@ def generate_and_save_diagonal_matrix(n):
     return V, filename, v_dict
 
 
-V, filename, v_dict = generate_and_save_diagonal_matrix(n)
+V, filename, v_dict, v_values = generate_and_save_diagonal_matrix(n) 
 
 
 # Iterate over each Psi value to compute matrices and check invertibility
