@@ -39,7 +39,7 @@ np.random.seed(4862)
 
 phi = 0.20                 # This is the importance of social connections to legislators which is used in the computation of the Katz-Bonacich centrality vector. 
 Psi = 0.10                 # This is the densitiy of the epsilon terms which is used in the computation of the pivotal probabilities.
-X = 500.0                    # This is the budget of the interest groups which is used in the computation of the optimal transfers.
+X = 5.0                    # This is the budget of the interest groups which is used in the computation of the optimal transfers.
 q = 0.5                    # This is the value of q which is used in the computation of the pivotal probabilities. (q-rule).      
 phistar = 2*Psi*phi        # This is the value of phi* which is used in the computation of the Katz-Bonacich centrality vector.
 vmax = 1.0                 # This is the maximum value of the diagonal elements of the matrix V.
