@@ -99,29 +99,21 @@ else:
 ############################################################################################################################################################################
 
 def generate_and_save_diagonal_matrix(n):
-    # Define the range for the diagonal elements
     lower_bound = -1
     upper_bound = 1
-
     V = np.zeros((n, n))
-
-    # Fill the diagonal elements of the matrix with random values between -1 and 1
     for i in range(n):
         V[i, i] = np.random.uniform(lower_bound, upper_bound)
-
-    # Save the matrix with a name 'Vnxn.npy', where n is replaced with the actual size
     filename = f'V{n}.npy'
     np.save(filename, V)
-
-    # Extract and save the diagonal elements as v1, v2, ..., vn
     v_elements = np.diag(V)
     v_dict = {f'v{i+1}': v_elements[i] for i in range(n)}
-
-    # Return the matrix, the filename it was saved as, and the diagonal elements
     return V, filename, v_dict
 
+# Generate matrix V and get the diagonal values
+V, filename, v_dict = generate_and_save_diagonal_matrix(n)
+v_values = np.diag(V)  # Extract diagonal values from V
 
-V, filename, v_dict, v_values = generate_and_save_diagonal_matrix(n)  
 
 
 # Uncomment the print statement below to see the output
