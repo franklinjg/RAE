@@ -242,7 +242,7 @@ for phi in phi_values:
     # Solve the linear system instead of inverting the matrix directly for numerical stability
     b_M = solve(matrix_inside_brackets, ones_vector)  # Solve the linear system
 
-    print(f"Psi: {phi:.2f}, The Katz-Bonacich centrality vector b_M is:")
+    print(f"phi: {phi:.2f}, The Katz-Bonacich centrality vector b_M is:")
     print(b_M)
     b_M_array = b_M.flatten()  # Flatten the matrix to a 1D array if needed for further processing
     print("Matrix as array:")
