@@ -113,11 +113,10 @@ def generate_and_save_diagonal_matrix(n):
     v_elements = np.diag(V)
     v_dict = {f'v{i+1}': v_elements[i] for i in range(n)}
 
-    # Return the matrix, the filename it was saved as, and the diagonal elements
-    return V, filename, v_dict
+ V, filename, v_dict = generate_and_save_diagonal_matrix(n)
 
-
-V, filename, v_dict, v_values = generate_and_save_diagonal_matrix(n) 
+# If you need v_values as an array of diagonal elements, you can directly take it from v_dict or V
+v_values = np.diag(V)  # This extracts diagonal values from the matrix V directly
 
 
 # Iterate over each Psi value to compute matrices and check invertibility
