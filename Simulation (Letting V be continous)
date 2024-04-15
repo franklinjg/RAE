@@ -1,1 +1,325 @@
+"""
+Necessary Libraries for Analysis Replication:
+-----------------------------------------------------
+To replicate my analysis, the libraries used in this code must be installed. If you encounter any issues with the installations, execute the following commands in your terminal:
+
+For Python 2.x:
+    pip install "library_name"
+
+For Python 3.x:
+    pip3 install "library_name"
+
+Seed for Reproducibility:
+-----------------------------------------------------
+The random seed is set to 4862 to ensure that the results are reproducible. It's important to note that setting a fixed seed is not the most efficient approach for achieving randomness. The fixed seed is used here only to meet a specific requirement. For scenarios involving large numbers, consider utilizing quasi-random number generators, as they provide a more evenly distributed sequence of numbers and actively prevent clustering.
+
+Special thanks to my friend Nishanth for his helpful comments. P.D. My code does not comply with PEP 8 standards. I am aware of this and I am working on it.
+"""
+
+
+import numpy as np
+import pandas as pd
+from sympy import Matrix
+import scipy.io
+from scipy.optimize import minimize
+from scipy.special import comb, logsumexp
+import matplotlib.pyplot as plt
+import networkx as nx
+import requests
+import pyreadr
+import os
+import tempfile
+
+
+np.random.seed(4862)
+
+############################################################################################################################################################################
+
+# Generating the constants and storing them 
+
+phi = 0.20                 # This is the importance of social connections to legislators which is used in the computation of the Katz-Bonacich centrality vector. 
+Psi = 0.10                 # This is the densitiy of the epsilon terms which is used in the computation of the pivotal probabilities.
+X = 5.0                    # This is the budget of the interest groups which is used in the computation of the optimal transfers.
+q = 0.5                    # This is the value of q which is used in the computation of the pivotal probabilities. (q-rule).      
+phistar = 2*Psi*phi        # This is the value of phi* which is used in the computation of the Katz-Bonacich centrality vector.
+vmax = 1.0                 # This is the maximum value of the diagonal elements of the matrix V.
+
+# Number of Legislators. Depending on your computer this code will be able to run for a large n. 
+
+n = 429
+
+############################################################################################################################################################################
+
+"""
+This section generates the network of legislators. The network is generated using the NetworkX library. 
+"""
+
+import requests
+import pyreadr
+import os
+import tempfile
+import numpy as np
+
+def store_matrix_entries(matrix):
+    stored_entries = {}
+    n = matrix.shape[0]
+    for i in range(n):
+        for j in range(n):
+            identifier = f"g_{i+1}{j+1}"
+            stored_entries[identifier] = matrix[i, j]
+    return stored_entries
+
+# URL of the raw R data file on GitHub
+url = 'https://raw.githubusercontent.com/franklinjg/RAE/29da2338741e37a621442490179455c570402bf4/G_party.rda'
+
+# Make a request to get the content of the .rda file
+response = requests.get(url)
+if response.status_code == 200:
+    # Create a temporary file
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_file.write(response.content)
+        tmp_file_path = tmp_file.name
+
+    # Read the R data file from the temporary file
+    result = pyreadr.read_r(tmp_file_path)
+
+    # Optionally delete the temporary file if you're done with it
+    os.remove(tmp_file_path)
+
+    # Now you can use 'result' as a normal result object from pyreadr
+    print(result.keys())  # For example, to print the keys of the loaded R data
+
+    # Assuming 'G_party' is the key for the data in the .rda file
+    G_party = result['G_party']
+
+    # Extract the 429x429 block from the DataFrame and convert it to a numpy matrix
+    Gn = G_party.iloc[0:429, 0:429].values
+
+    # Transpose the numpy matrix G
+    G_transpose = Gn.T
+
+    # Storing matrix entries in a dictionary from the extracted block
+    entries_dict = store_matrix_entries(Gn)
+else:
+    print("Failed to fetch the file: Status code", response.status_code)
+
+############################################################################################################################################################################
+
+
+def generate_and_save_diagonal_matrix(n):
+    # Define the range for the diagonal elements
+    lower_bound = -1
+    upper_bound = 1
+
+    V = np.zeros((n, n))
+
+    # Fill the diagonal elements of the matrix with random values between -1 and 1
+    for i in range(n):
+        V[i, i] = np.random.uniform(lower_bound, upper_bound)
+
+    # Save the matrix with a name 'Vnxn.npy', where n is replaced with the actual size
+    filename = f'V{n}.npy'
+    np.save(filename, V)
+
+    # Extract and save the diagonal elements as v1, v2, ..., vn
+    v_elements = np.diag(V)
+    v_dict = {f'v{i+1}': v_elements[i] for i in range(n)}
+
+    # Return the matrix, the filename it was saved as, and the diagonal elements
+    return V, filename, v_dict
+
+# Example usage:
+
+V, filename, v_dict = generate_and_save_diagonal_matrix(n)
+
+# Uncomment the print statement below to see the output
+# print(V, filename, v_dict)
+
+############################################################################################################################################################################
+
+# Checking if Assumption 1 holds 
+
+def check_inequality(Psi, vmax, phi, X):
+    value_inside = vmax + phi + np.log(2*X)
+    result = Psi * value_inside
+    print(f"Computed result: {result}")  
+    return result < 0.5
+
+inequality_holds = check_inequality(Psi, vmax, phi, X)
+print("Does the inequality hold strictly? :", inequality_holds)
+
+############################################################################################################################################################################
+
+# Checking if Assumption 2 holds 
+
+# Step 1: Computing the matrix (I - 2 * phi * Psi * Gn)
+I = np.eye(n)  # Identity matrix of size nxn
+matrix_to_invert = I - 2 * phi * Psi * Gn
+
+
+# Step 2: Check if the matrix is invertible (determinant is not zero)
+is_invertible = np.linalg.det(matrix_to_invert) != 0
+
+# Step 3: If invertible, compute the inverse and the Katz-Bonacich vector
+if is_invertible:
+    inverse_matrix = np.linalg.inv(matrix_to_invert)
+    # Step 4: Multiply the inverse by a vector of ones
+    katz_bonacich_vector = inverse_matrix.dot(np.ones(n))
+    # Step 5: Check if all elements of the resulting vector are positive
+    all_positive = np.all(katz_bonacich_vector > 0)
+else:
+    all_positive = False  # If the matrix is not invertible, the assumption does not hold
+
+# Result
+assumption_2_holds = is_invertible and all_positive
+print("Does Assumption 2 hold? :", assumption_2_holds)
+
+############################################################################################################################################################################
+
+# Assumption 3 is always satisfied. 
+
+############################################################################################################################################################################
+
+def calculate_pivotal_probabilities(x):
+    n = len(x)  # Should always be 429
+    half_n = (n - 1) // 2  # This computes to 214
+    pivotal_probs = np.zeros(n)
+    epsilon = 1e-10  # A tiny value to prevent log(0)
+    
+    # Precompute log combinations, accounting for half_n elements exactly
+    log_comb = np.array([np.log(comb(n - 1, j)) for j in range(half_n)])  # Use half_n, not half_n + 1 since half_n = 214
+    
+    for i in range(n):
+        others = np.concatenate((x[:i], x[i+1:]))
+        # Ensure none of the values in 'others' can cause log(0) issues
+        others = np.clip(others, epsilon, 1 - epsilon)
+        
+        if i != n - 1:  # Standard case
+            log_probs = log_comb + np.log(others[:half_n]) + np.log(1 - others[half_n:half_n + half_n])
+        else:  # Last element case adjustment might not be needed as 'n-1' is even and split exactly in half
+            log_probs = log_comb + np.log(others[:half_n]) + np.log(1 - others[half_n:])
+        
+        # Compute the sum of logs and convert back to exponential
+        pivotal_probs[i] = np.exp(logsumexp(log_probs))
+
+    return pivotal_probs / (2**(n - 1))
+
+
+def solve_system(v, phi, Psi, Gn, pivotal_prob_func, tolerance=1e-6, max_iterations=1000):
+    n = len(v)
+    x = np.full(n, 0.5)  # Initial guess set to 0.5 for all elements.
+
+    for iteration in range(max_iterations):
+        pivotal_probs = pivotal_prob_func(x)  # Calculate pivotal probabilities
+        x_new = np.empty(n)
+        for i in range(n):
+            # Calculate the new x_i using the given formula
+            # Use np.clip to avoid overflow/underflow by ensuring values are within the (0,1) range
+            sum_gx = sum(Gn[i, j] * np.clip(1 - x[j], 1e-10, 1-1e-10) for j in range(n))
+            x_new[i] = np.clip(q + Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
+
+        # Checking for convergence
+        if np.allclose(x, x_new, atol=tolerance):
+            return x  # Converged
+        x = x_new  # Update x for the next iteration
+
+    raise ValueError("The system did not converge within the maximum number of iterations")
+
+
+
+def compute_jacobian(x, pivotal_prob_func, h=1e-5):
+    n = len(x)
+    jacobian = np.zeros((n, n))
+    
+    # Pre-calculate function values for the base vector
+    f_x = pivotal_prob_func(x)
+    
+    for j in range(n):
+        x1 = x.copy()
+        x2 = x.copy()
+        x1[j] -= h/2
+        x2[j] += h/2
+        
+        f1 = pivotal_prob_func(x1)
+        f2 = pivotal_prob_func(x2)
+        jacobian[:, j] = (f2 - f1) / h  # Difference divided by perturbation
+
+    return jacobian
+
+
+v_values = np.array([v_dict[f'v{i+1}'] for i in range(n)])
+
+# Now we can call solve_system and compute_jacobian
+x_star = solve_system(v_values, phi, Psi, Gn, calculate_pivotal_probabilities)
+jacobian_matrix = compute_jacobian(x_star, calculate_pivotal_probabilities)
+
+#print("The pivotal probabilities are:", calculate_pivotal_probabilities(x_star))
+#print(jacobian_matrix)
+
+
+transposed_matrixJ = jacobian_matrix.T
+
+#print(transposed_matrixJ)
+
+############################################################################################################################################################################
+
+import numpy as np
+from scipy.linalg import solve  # Use scipy.linalg.solve for more numerically stable solutions
+
+I = np.eye(n)  # Identity matrix of size n x n
+ones_vector = np.ones((n, 1))  # Vector of ones of size n x 1
+V_diag = np.diag(V)  # Diagonal elements of the matrix V
+
+# Calculate the matrix inside the brackets more efficiently
+matrix_inside_brackets = I - (phistar * G_transpose + Psi * np.diag(transposed_matrixJ - V_diag))
+
+# Solve the linear system instead of inverting the matrix directly for numerical stability
+b_M = solve(matrix_inside_brackets, ones_vector)  # Solve the linear system
+
+print("The Katz-Bonacich centrality vector b_M is:")
+print(b_M)
+b_M_array = b_M.flatten()  # Flatten the matrix to a 1D array if needed for further processing
+print("Matrix as array:")
+print(b_M_array)
+
+###################################################################################################################################################################################
+"""
+This part of the code solves the maximisation problem of the interest groups to get the vector of transfers.
+"""
+
+# Define the objective function to be maximized (negative because minimize() finds the minimum)
+def objective_function(s, b_M):
+    return -np.sum(b_M * np.log(s))
+
+# Define the constraints of the optimization problem (sum of s must be equal to X)
+constraints = ({'type': 'eq', 'fun': lambda s: np.sum(s) - X})
+
+# Define the bounds for each transfer, s must be greater than 0
+bounds = [(1e-5, None) for _ in range(len(b_M))]
+
+# Initial guess for the values of s
+initial_s = np.full(len(b_M), X / len(b_M))
+
+# Run the optimization algorithm
+result = minimize(objective_function, initial_s, args=(b_M_array), bounds=bounds, constraints=constraints)
+
+# The optimal vector of transfers s*
+s_optimal = result.x
+
+# Display the optimal transfers
+print("Optimal transfers vector s*:")
+print(s_optimal)
+print("Hello World")
+
+
+
+# Assuming s_optimal is your optimal vector obtained from the optimization process
+num_entries = len(s_optimal)
+
+print("Number of entries in the optimal vector:", num_entries)
+
+
+
+###################################################################################################################################################################################
+
 
