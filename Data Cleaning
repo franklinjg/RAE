@@ -1,0 +1,86 @@
+import numpy as np
+import requests
+import pyreadr
+import os
+import tempfile
+
+def fetch_and_save_matrices(url):
+    # Define ranges for each congress session in the matrix
+    ranges = {
+        '109th_Congress': slice(0, 429),
+        '110th_Congress': slice(430, 871),
+        '111th_Congress': slice(872, 1297),
+        '112th_Congress': slice(1298, 1719),
+        '113th_Congress': slice(1720, 2126)
+    }
+
+    # Make a request to get the content of the .rda file
+    response = requests.get(url)
+    if response.status_code == 200:
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            tmp_file.write(response.content)
+            tmp_file_path = tmp_file.name
+
+        # Read the R data file from the temporary file
+        result = pyreadr.read_r(tmp_file_path)
+        os.remove(tmp_file_path)  # Delete the temp file after reading
+
+        # Assuming 'G_party' is the key for the data in the .rda file
+        if 'G_party' in result:
+            G_party = result['G_party']
+            for name, rng in ranges.items():
+                Gn = G_party.iloc[rng].values
+                np.save(f'{name}.npy', Gn)  # Save each slice to a separate .npy file
+                print(f"{name} matrix saved.")
+        else:
+            print("Key 'G_party' not found in the loaded R data.")
+    else:
+        print("Failed to fetch the file: Status code", response.status_code)
+
+# URL of the raw R data file on GitHub
+url = 'https://raw.githubusercontent.com/franklinjg/RAE/29da2338741e37a621442490179455c570402bf4/G_party.rda'
+fetch_and_save_matrices(url)
+
+
+import numpy as np
+
+# Load each matrix
+congress_109 = np.load('109th_Congress.npy')
+congress_110 = np.load('110th_Congress.npy')
+congress_111 = np.load('111th_Congress.npy')
+congress_112 = np.load('112th_Congress.npy')
+congress_113 = np.load('113th_Congress.npy')
+
+import numpy as np
+
+# Function to store matrix entries in a dictionary
+def store_matrix_entries(matrix):
+    stored_entries = {}
+    n = matrix.shape[0]
+    for i in range(n):
+        for j in range(n):
+            identifier = f"g_{i+1}{j+1}"
+            stored_entries[identifier] = matrix[i, j]
+    return stored_entries
+
+# List of matrix filenames and their corresponding labels
+matrices_info = [
+    ("109th_Congress.npy", 429),
+    ("110th_Congress.npy", 871),
+    ("111th_Congress.npy", 1297),
+    ("112th_Congress.npy", 1719),
+    ("113th_Congress.npy", 2126)
+]
+
+# Process each matrix
+for filename, size in matrices_info:
+    try:
+        # Load the matrix
+        full_matrix = np.load(filename)
+        # Extract the specific block and transpose
+        Gn = full_matrix[:size, :size]
+        G_transpose = Gn.T
+
+        # Store the matrix entries in a dictionary
+        entries_dict = store_matrix_entries(Gn)
+        print(f"Entries stored for {filename}. Sample entry: {next(iter(entries_dict.items()))}")
