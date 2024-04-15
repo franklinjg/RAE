@@ -254,8 +254,16 @@ for Psi in Psi_values:
 
 
 
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
 
-# Assuming earlier parts of the code are unchanged, focusing on the core computation loop:
+# Define the objective function outside the loop
+def objective_function(s, b_M):
+    return -np.sum(b_M * np.log(s))
+
+# Setup the optimization once if the bounds are constant for all Psi
+bounds = [(1e-5, None)] * n
 
 # Loop to calculate b_M and perform optimization
 for Psi in Psi_values:
@@ -270,17 +278,12 @@ for Psi in Psi_values:
         all_positive = np.all(b_M_array > 0)
 
         if all_positive:
-            # Define the objective function within the loop or before the loop if it does not change
-            def objective_function(s, b_M):
-                return -np.sum(b_M * np.log(s))
-
             # Constraints and bounds for optimization
-            constraints = ({'type': 'eq', 'fun': lambda s: np.sum(s) - X})
-            bounds = [(1e-5, None) for _ in range(n)]
-            initial_s = np.full(n, X / n)
+            constraints = {'type': 'eq', 'fun': lambda s: np.sum(s) - X}
+            initial_s = np.full(n, max(X / n, 1e-5))  # Ensure initial guess meets the bounds
 
-            # Perform optimization
-            result = minimize(objective_function, initial_s, args=(b_M_array), bounds=bounds, constraints=constraints)
+            # Perform optimization with a more robust method if necessary
+            result = minimize(objective_function, initial_s, args=(b_M_array), method='SLSQP', bounds=bounds, constraints=constraints)
             s_optimal = result.x
 
             # Store selected entries for plotting
@@ -300,67 +303,3 @@ plt.show()
 
 
 
-
-# Assume Psi_values and other required variables like X, vmax, and phi are defined globally
-
-# Function to check the inequality for a given Psi
-def check_inequality(Psi, vmax, phi, X):
-    value_inside = vmax + phi + np.log(2 * X)
-    result = Psi * value_inside
-    return result < 0.5
-
-# Check if the inequality holds for all Psi
-def check_all_psi(Psi_values, vmax, phi, X):
-    all_hold = True
-    for Psi in Psi_values:
-        if not check_inequality(Psi, vmax, phi, X):
-            all_hold = False
-            break
-    return all_hold
-
-# Perform the check
-if check_all_psi(Psi_values, vmax, phi, X):
-    print("YES OVERALL")
-else:
-    print("NO OVERALL")
-
-
-import numpy as np
-
-# Assume Psi_values, n, Gn, and phi are defined globally
-
-# Function to compute phistar for a given Psi
-def phistar(Psi, phi):
-    return 2 * Psi * phi
-
-def check_all_matrices(Psi_values, Gn, n, phi):
-    all_hold = True
-    for Psi in Psi_values:
-        # Compute the matrix to invert using a fixed phi and current Psi
-        I = np.eye(n)  # Identity matrix of size n x n
-        phistar_value = phistar(Psi, phi)  # Compute phistar for the current Psi
-        matrix_to_invert = I - phistar_value * Gn
-
-        # Check if the matrix is invertible (determinant is not zero)
-        is_invertible = np.linalg.det(matrix_to_invert) != 0
-
-        if is_invertible:
-            # If invertible, compute the inverse and the Katz-Bonacich vector
-            inverse_matrix = np.linalg.inv(matrix_to_invert)
-            katz_bonacich_vector = inverse_matrix.dot(np.ones(n))  # Multiply the inverse by a vector of ones
-            all_positive = np.all(katz_bonacich_vector > 0)  # Check if all elements of the vector are positive
-
-            if not all_positive:
-                all_hold = False
-                break
-        else:
-            all_hold = False
-            break
-
-    return all_hold
-
-# Run the check for all Psi values
-if check_all_matrices(Psi_values, Gn, n, phi):
-    print("OVERALL YES 2")
-else:
-    print("NO OVERALL")
