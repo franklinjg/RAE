@@ -128,9 +128,9 @@ def generate_and_save_diagonal_matrix(n):
     # Return the matrix, the filename it was saved as, and the diagonal elements
     return V, filename, v_dict
 
-# Example usage:
 
-V, filename, v_dict = generate_and_save_diagonal_matrix(n)
+V, filename, v_dict, v_values = generate_and_save_diagonal_matrix(n)  
+
 
 # Uncomment the print statement below to see the output
 # print(V, filename, v_dict)
