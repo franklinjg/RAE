@@ -1,5 +1,9 @@
 # Welcome to the data cleaning section of my paper.
 
+# Please note that I use the data provided in the "Supplemental Materials" section from the Battaglini (2018) paper.
+# You can find the original source in this link: https://www.journals.uchicago.edu/doi/suppl/10.1086/700074
+# Note that this link takes you to the University of Chicago Press Journal so you need to be affiliated with some kind of educational instution to get access. Otherwise, you have to pay. 
+
 
 
 import numpy as np
