@@ -24,16 +24,6 @@ x7 = []
 x8 = []
 x9 = []
 x10 = []
-x11 = []
-x12 = []
-x13 = []
-x14 = []
-x15 = []
-x16 = []
-x17 = []
-x18 = []
-x19 = []
-x20 = []
 
 
 
@@ -270,17 +260,7 @@ for phi in phi_values:
     x8.append(b_M_array[3])
     x9.append(b_M_array[410])
     x10.append(b_M_array[299])
-    x11.append(b_M_array[55])
-    x12.append(b_M_array[428])
-    x13.append(b_M_array[244])
-    x14.append(b_M_array[147])
-    x15.append(b_M_array[99])
-    x16.append(b_M_array[235])
-    x17.append(b_M_array[311])
-    x18.append(b_M_array[16])
-    x19.append(b_M_array[401])
-    x20.append(b_M_array[302])
-   
+
    
 
 
