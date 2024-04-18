@@ -31,7 +31,7 @@ x10 = []
 
 # Generating the constants and storing them 
 
-phi_values = np.linspace(0.1, 1.19, 100) 
+phi_values = np.linspace(0.1, 1.19, 20) 
 Psi = 0.10                 
 X = 5.0                    # This is the budget of the interest groups which is used in the computation of the optimal transfers.
 q = 0.5                    # This is the value of q which is used in the computation of the pivotal probabilities. (q-rule).      
@@ -300,7 +300,7 @@ for phi in phi_values:
 
 plt.figure(figsize=(10, 5))
 for idx in x_entries.keys():
-    plt.plot(Psi_values, [optimal_transfers_for_plotting[idx][i] for i, phi in enumerate(phi_values)], label=f'Entry {idx + 1}')
+    plt.plot(phi_values, [optimal_transfers_for_plotting[idx][i] for i, phi in enumerate(phi_values)], label=f'Entry {idx + 1}')
 plt.xlabel(r'$\phi$')
 plt.ylabel('Optimal Transfer')
 plt.title('Optimal Transfers vs. Uncertainty')
