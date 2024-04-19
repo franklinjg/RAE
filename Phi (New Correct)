@@ -34,7 +34,26 @@ x17 = []
 x18 = []
 x19 = []
 x20 = []
-
+x21 = []
+x22 = []
+x23 = []
+x24 = []
+x25 = []
+x26 = []
+x27 = []
+x28 = []
+x29 = []
+x30 = []
+x31 = []
+x32 = []
+x33 = []
+x34 = []
+x35 = []
+x36 = []
+x37 = []
+x38 = []
+x39 = []
+x40 = []
 
 ############################################################################################################################################################################
 phi_values = np.linspace(0.1, 1.19, 10) 
@@ -266,26 +285,47 @@ for phi in phi_values:
 
 
 
-    x1.append(b_M_array[1])
-    x2.append(b_M_array[2])
-    x3.append(b_M_array[3])
-    x4.append(b_M_array[4])
-    x5.append(b_M_array[5])
-    x6.append(b_M_array[6])
-    x7.append(b_M_array[7])
-    x8.append(b_M_array[8])
-    x9.append(b_M_array[9])
-    x10.append(b_M_array[10])
-    x11.append(b_M_array[15])
-    x12.append(b_M_array[143])
-    x13.append(b_M_array[221])
-    x14.append(b_M_array[145])
-    x15.append(b_M_array[126])
-    x16.append(b_M_array[333])
-    x17.append(b_M_array[355])
-    x18.append(b_M_array[388])
-    x19.append(b_M_array[399])
-    x20.append(b_M_array[400])
+x1.append(b_M_array[42])
+x2.append(b_M_array[123])
+x3.append(b_M_array[213])
+x4.append(b_M_array[5])
+x5.append(b_M_array[365])
+x6.append(b_M_array[27])
+x7.append(b_M_array[308])
+x8.append(b_M_array[59])
+x9.append(b_M_array[198])
+x10.append(b_M_array[11])
+x11.append(b_M_array[125])
+x12.append(b_M_array[278])
+x13.append(b_M_array[376])
+x14.append(b_M_array[320])
+x15.append(b_M_array[215])
+x16.append(b_M_array[195])
+x17.append(b_M_array[169])
+x18.append(b_M_array[399])
+x19.append(b_M_array[318])
+x20.append(b_M_array[82])
+x21.append(b_M_array[165])
+x22.append(b_M_array[208])
+x23.append(b_M_array[73])
+x24.append(b_M_array[291])
+x25.append(b_M_array[44])
+x26.append(b_M_array[354])
+x27.append(b_M_array[401])
+x28.append(b_M_array[392])
+x29.append(b_M_array[287])
+x30.append(b_M_array[140])
+x31.append(b_M_array[246])
+x32.append(b_M_array[379])
+x33.append(b_M_array[329])
+x34.append(b_M_array[97])
+x35.append(b_M_array[204])
+x36.append(b_M_array[114])
+x37.append(b_M_array[265])
+x38.append(b_M_array[356])
+x39.append(b_M_array[158])
+x40.append(b_M_array[243])
+
 
    
 
@@ -311,6 +351,26 @@ plt.plot(phi_values, x17, label='Legislator 17')
 plt.plot(phi_values, x18, label='Legislator 18')
 plt.plot(phi_values, x19, label='Legislator 19')
 plt.plot(phi_values, x20, label='Legislator 20')
+plt.plot(phi_values, x21, label='Legislator 21')
+plt.plot(phi_values, x22, label='Legislator 22')
+plt.plot(phi_values, x23, label='Legislator 23')
+plt.plot(phi_values, x24, label='Legislator 24')
+plt.plot(phi_values, x25, label='Legislator 25')
+plt.plot(phi_values, x26, label='Legislator 26')
+plt.plot(phi_values, x27, label='Legislator 27')
+plt.plot(phi_values, x28, label='Legislator 28')
+plt.plot(phi_values, x29, label='Legislator 29')
+plt.plot(phi_values, x30, label='Legislator 30')
+plt.plot(phi_values, x31, label='Legislator 31')
+plt.plot(phi_values, x32, label='Legislator 32')
+plt.plot(phi_values, x33, label='Legislator 33')
+plt.plot(phi_values, x34, label='Legislator 34')
+plt.plot(phi_values, x35, label='Legislator 35')
+plt.plot(phi_values, x36, label='Legislator 36')
+plt.plot(phi_values, x37, label='Legislator 37')
+plt.plot(phi_values, x38, label='Legislator 38')
+plt.plot(phi_values, x39, label='Legislator 39')
+plt.plot(phi_values, x40, label='Legislator 40')
 
 plt.xlabel(r'$\phi$')  
 plt.ylabel('Entry Value')
