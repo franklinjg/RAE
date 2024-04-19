@@ -1,0 +1,408 @@
+import numpy as np                             #
+import pandas as pd                            #
+from sympy import Matrix                       #
+from scipy.optimize import minimize            #
+from scipy.special import comb, logsumexp      #
+import matplotlib.pyplot as plt                #
+import requests                                #
+import pyreadr                                 #
+import os                                      #
+import tempfile                                #
+from scipy.linalg import solve                 #
+
+np.random.seed(4862)
+
+
+# Arrays to store the results
+x1 = []
+x2 = []
+x3 = []
+x4 = []
+x5 = []
+x6 = []
+x7 = []
+x8 = []
+x9 = []
+x10 = []
+x11 = []
+x12 = []
+x13 = []
+x14 = []
+x15 = []
+x16 = []
+x17 = []
+x18 = []
+x19 = []
+x20 = []
+x21 = []
+x22 = []
+x23 = []
+x24 = []
+x25 = []
+x26 = []
+x27 = []
+x28 = []
+x29 = []
+x30 = []
+
+# There is another more efficient way of doing this. Feel free to use whatever you want. 
+
+
+############################################################################################################################################################################
+
+# Generating the constants and storing them 
+
+phi_values = np.linspace(0.1, 1.19, 60)    # The 60 here means that the interval (0.1, 1.19) will be divided into 60 different values of \psi. The higher this number the smoother the graph but the more computationally expensive the operation will be. 
+Psi = 0.10               
+X = 5.0                    # This is the budget of the interest groups which is used in the computation of the optimal transfers.
+q = 0.5                    # This is the value of q which is used in the computation of the pivotal probabilities. (q-rule).      
+ # This is the value of phi* which is used in the computation of the Katz-Bonacich centrality vector.
+vmax = 1.0                 # This is the maximum value of the diagonal elements of the matrix V.
+
+# Function to compute phistar for a given Psi
+def phistar(phi):
+    return 2 * Psi * phi
+
+
+# Number of Legislators. Because I am looking at the 109th congress I have to set it to 429. 
+
+n = 429
+
+############################################################################################################################################################################
+
+def store_matrix_entries(matrix):
+    # Initialise an empty dictionary to store matrix entries.
+    stored_entries = {}
+
+    # Determine the number of rows (or columns) in the matrix.
+    n = matrix.shape[0]
+
+    # Loop through each row of the matrix.
+    for i in range(n):
+        # Loop through each column for the current row.
+        for j in range(n):
+            # Create a unique identifier for the current element in the matrix.
+            identifier = f"g_{i+1}{j+1}"
+
+            # Store the matrix value at the current row and column using the identifier as the key.
+            stored_entries[identifier] = matrix[i, j]
+
+    # Return the dictionary containing all matrix entries.
+    return stored_entries
+
+
+# Define the URL to the raw R data file on GitHub
+url = 'https://raw.githubusercontent.com/franklinjg/RAE/29da2338741e37a621442490179455c570402bf4/G_party.rda'
+
+# Initiate a request to download the content of the R data file
+response = requests.get(url)
+if response.status_code == 200:
+    # Successfully retrieved the data file, proceed with file handling
+
+    # Create a temporary file to save the downloaded content
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_file.write(response.content)  # Write the content to the temporary file
+        tmp_file_path = tmp_file.name  # Save the path to the temporary file for later use
+
+    # Use the pyreadr library to read the R data file from the saved temporary location
+    result = pyreadr.read_r(tmp_file_path)
+
+    # After reading, it's safe to delete the temporary file to free up system resources
+    os.remove(tmp_file_path)
+
+    # Output the keys from the loaded R data to understand what dataframes are available
+    print(result.keys())
+
+    # Assume that 'G_party' is the key within the R data that holds the data of interest
+    G_party = result['G_party']
+
+    # Extract a specific 429x429 block from the DataFrame for further analysis
+    Gn = G_party.iloc[0:429, 0:429].values
+
+    # For certain computations, it may be useful to work with the transpose of this matrix
+    G_transpose = Gn.T
+
+    # Store individual entries of the matrix in a dictionary for easy access
+    entries_dict = store_matrix_entries(Gn)
+else:
+    # If the file could not be retrieved, output the HTTP status code to diagnose the issue
+    print("Failed to fetch the file: Status code", response.status_code)
+
+
+############################################################################################################################################################################
+
+# Define a function to generate an n x n diagonal matrix V and store the diagonal elements.
+def generate_and_save_diagonal_matrix(n):
+    # Set the potential values for the diagonal elements of the matrix.
+    possible_values_diagonal = [-1, 1, 0.5, -0.5]
+    V = np.zeros((n, n))  # Initialise a matrix of size n x n filled with zeros.
+    
+    # Populate the diagonal of the matrix with random choices from the specified possible values.
+    for i in range(n):
+        V[i, i] = np.random.choice(possible_values_diagonal)
+    
+    # Construct a filename to save the matrix, formatted to include the matrix dimension.
+    filename = f'V{n}.npy'
+    
+    # Save the matrix to a file using NumPy's save function, which stores it in a binary format.
+    np.save(filename, V)
+    
+    # Extract the diagonal elements from the matrix for easy access.
+    v_elements = np.diag(V)
+    
+    # Create a dictionary to store these diagonal elements with a key that indicates their position.
+    v_dict = {f'v{i+1}': v_elements[i] for i in range(n)}
+    
+    # Return the matrix, the filename it was saved under, the dictionary of diagonal elements, and the list of elements.
+    return V, filename, v_dict, v_elements
+
+# Generate the matrix and get the diagonal values
+V, filename, v_dict, v_values = generate_and_save_diagonal_matrix(n)  # Now v_values is defined
+
+
+# Iterate over each Psi value to compute matrices and check invertibility
+for phi in phi_values:
+    # Step 1: Compute the matrix to invert using a fixed phi and current Psi
+    I = np.eye(n)  # Identity matrix of size nxn
+    phistar_value = phistar(phi)  # Compute phistar for the current Psi
+    matrix_to_invert = I - phistar_value * Gn
+
+    # Step 2: Check if the matrix is invertible (determinant is not zero)
+    is_invertible = np.linalg.det(matrix_to_invert) != 0
+
+    # Step 3: If invertible, compute the inverse and the Katz-Bonacich vector
+    if is_invertible:
+        inverse_matrix = np.linalg.inv(matrix_to_invert)
+        # Step 4: Multiply the inverse by a vector of ones
+        katz_bonacich_vector = inverse_matrix.dot(np.ones(n))
+        # Step 5: Check if all elements of the resulting vector are positive
+        all_positive = np.all(katz_bonacich_vector > 0)
+    else:
+        all_positive = False  # If the matrix is not invertible, the assumption does not hold
+
+    # Result
+    assumption_2_holds = is_invertible and all_positive
+    print(f"Psi: {Psi}, Does Assumption 2 hold?: {assumption_2_holds}")
+
+
+############################################################################################################################################################################
+
+# Define a function to check a specific mathematical inequality.
+def check_inequality(Psi, vmax, phi, X):
+    # Compute the value inside the inequality. This involves adding vmax and phi,
+    # and the logarithm of twice the value of X.
+    value_inside = vmax + phi + np.log(2*X)
+    
+    # Multiply the value inside by Psi to get the final result of the expression.
+    result = Psi * value_inside
+    
+    # Print the computed result for debugging or tracking purposes.
+    print(f"For Psi = {phi}, computed result: {result}")
+    
+    # Return True if the result is less than 0.5, indicating the inequality holds.
+    return result < 0.5
+
+# Loop over each value of phi to check if the inequality holds under various conditions.
+for phi in phi_values:
+    # Call the function to check the inequality with the current value of phi.
+    inequality_holds = check_inequality(Psi, vmax, phi, X)
+    
+    # Print the outcome to confirm whether the inequality holds for each phi value.
+    print(f"Does the inequality hold strictly for Psi = {Psi}? : {inequality_holds}")
+
+
+############################################################################################################################################################################
+
+# Function to calculate pivotal probabilities based on the input vector x
+def calculate_pivotal_probabilities(x):
+    # Calculate the halfway point of the list, accounting for zero-based indexing
+    half_n = (len(x) - 1) // 2
+    # Initialise an array of zeros to store pivotal probabilities for each element in x
+    pivotal_probs = np.zeros(len(x))
+    # Compute logarithmic combinations once to enhance efficiency
+    log_comb = np.array([np.log(comb(len(x) - 1, j)) for j in range(half_n)])
+    
+    # Iterate through each element in x to calculate its pivotal probability
+    for i in range(len(x)):
+        # Create an array of all other elements excluding the current element i
+        others = np.concatenate((x[:i], x[i+1:]))
+        # Ensure the values in 'others' are within the bounds to avoid log(0) issues
+        others = np.clip(others, epsilon, 1 - epsilon)
+        # Compute logarithmic probabilities using combinations and the logarithms of probabilities
+        if i != len(x) - 1:
+            log_probs = log_comb + np.log(others[:half_n]) + np.log(1 - others[half_n:])
+        else:
+            # Handle the last element case differently if the number of elements is even
+            log_probs = log_comb + np.log(others[:half_n]) + np.log(1 - others[half_n:])
+        # Calculate the pivotal probability by summing exponentiated logarithmic probabilities
+        pivotal_probs[i] = np.exp(logsumexp(log_probs))
+
+    # Return the pivotal probabilities normalised by the number of possible combinations
+    return pivotal_probs / (2**(len(x) - 1))
+
+
+# Function to solve the system for each Psi
+def solve_system(v, phi_values, Psi, Gn, pivotal_prob_func, tolerance=1e-6, max_iterations=1000):
+    # Determine the number of elements in vector v
+    n = len(v)
+    results = {}  # Dictionary to store the results for each value of phi
+    
+    # Iterate through each value of phi to solve the system
+    for phi in phi_values:
+        x = np.full(n, 0.5)  # Initialise x with 0.5 as the starting guess for each element
+        # Execute the iterative process up to a maximum number of iterations
+        for iteration in range(max_iterations):
+            pivotal_probs = pivotal_prob_func(x)  # Calculate pivotal probabilities for current x
+            x_new = np.empty(n)  # Prepare a new array to store updated values of x
+            # Update each element in x based on the pivotal probabilities and network effects
+            for i in range(n):
+                sum_gx = sum(Gn[i, j] * np.clip(1 - x[j], 1e-10, 1-1e-10) for j in range(n))
+                x_new[i] = np.clip(Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
+
+            # Check if the new x values are close enough to the old values to consider the system converged
+            if np.allclose(x, x_new, atol=tolerance):
+                results[phi] = x_new
+                break
+            x = x_new  # Update x to the new values for the next iteration
+        else:
+            # If no convergence was reached, log the failure and store None as the result for this phi
+            print(f"Did not converge for Psi: {phi}")
+            results[phi] = None
+
+    return results  # Return the dictionary containing the results for each phi
+
+# Function to compute the Jacobian matrix for a given system state
+def compute_jacobian(x, pivotal_prob_func, h=1e-5):
+    n = len(x)  # Number of variables in x
+    jacobian = np.zeros((n, n))  # Initialise the Jacobian matrix with zeros
+    
+    # Compute the Jacobian using numerical differentiation
+    for j in range(n):
+        x1 = x.copy()
+        x2 = x.copy()
+        # Perturb x[j] slightly to compute the derivative
+        x1[j] -= h / 2
+        x2[j] += h / 2
+        # Calculate the pivotal probabilities for these perturbed values
+        f1 = pivotal_prob_func(x1)
+        f2 = pivotal_prob_func(x2)
+        # Compute the derivative by finite differences
+        jacobian[:, j] = (f2 - f1) / h
+
+    return jacobian  # Return the computed Jacobian matrix
+
+# Main execution block to solve the system and compute the Jacobian for each phi
+for phi in phi_values:
+    results = solve_system(v_values, phi_values, Psi, Gn, calculate_pivotal_probabilities)
+    if results[phi] is not None:
+        jacobian_matrix = compute_jacobian(results[phi], calculate_pivotal_probabilities)
+        transposed_matrixJ = jacobian_matrix.T  # Calculate and store the transpose of the Jacobian
+
+        
+
+############################################################################################################################################################################
+
+I = np.eye(n)  # Identity matrix of size n x n
+ones_vector = np.ones((n, 1))  # Vector of ones of size n x 1
+V_diag = np.diag(V)  # Diagonal elements of the matrix V
+
+
+# Loop over each Psi value
+for phi in phi_values:
+    # Calculate the value from the phistar function
+    phistar_value = phistar(phi)  # Assuming phistar now only takes Psi, since phi is fixed
+    
+    # Calculate the matrix inside the brackets more efficiently
+    matrix_inside_brackets = I - (phistar_value * G_transpose + Psi * transposed_matrixJ @ V)
+
+# Solve the linear system Ax = b for x, where A is matrix_inside_brackets and b is ones_vector.
+# This method is preferred over directly computing the inverse of A (A^-1) and then multiplying by b (A^-1 * b)
+# because it is more numerically stable and computationally efficient.
+# Directly inverting a matrix can lead to large numerical errors especially if the matrix is near singular or poorly conditioned.
+# The 'solve' function uses optimized algorithms (like LU decomposition) that are more robust to these issues, providing more accurate results.
+
+    # Solve the linear system instead of inverting the matrix directly for numerical stability
+    b_M = solve(matrix_inside_brackets, ones_vector)  # Solve the linear system
+
+    print(f"phi: {phi:.2f}, The Katz-Bonacich centrality vector b_M is:")
+    print(b_M)
+    b_M_array = b_M.flatten()  # Flatten the matrix to a 1D array if needed for further processing
+    print("Matrix as array:")
+    print(b_M_array)
+
+
+
+    x1.append(b_M_array[15])
+    x2.append(b_M_array[143])
+    x3.append(b_M_array[221])
+    x4.append(b_M_array[145])
+    x5.append(b_M_array[126])
+    x6.append(b_M_array[23])
+    x7.append(b_M_array[333])
+    x8.append(b_M_array[3])
+    x9.append(b_M_array[410])
+    x10.append(b_M_array[299])
+    x11.append(b_M_array[1])
+    x12.append(b_M_array[147])
+    x13.append(b_M_array[291])
+    x14.append(b_M_array[101])
+    x15.append(b_M_array[121])
+    x16.append(b_M_array[29])
+    x17.append(b_M_array[397])
+    x18.append(b_M_array[9])
+    x19.append(b_M_array[421])
+    x20.append(b_M_array[234])
+    x21.append(b_M_array[55])
+    x22.append(b_M_array[66])
+    x23.append(b_M_array[77])
+    x24.append(b_M_array[99])
+    x25.append(b_M_array[88])
+    x26.append(b_M_array[148])
+    x27.append(b_M_array[111])
+    x28.append(b_M_array[222])
+    x29.append(b_M_array[332])
+    x30.append(b_M_array[402])
+  
+
+
+
+
+   
+
+
+plt.figure(figsize=(10, 5))
+plt.plot(phi_values, x1, label='Legislator 1')
+plt.plot(phi_values, x2, label='Legislator 2')
+plt.plot(phi_values, x3, label='Legislator 3')
+plt.plot(phi_values, x4, label='Legislator 4')
+plt.plot(phi_values, x5, label='Legislator 5')
+plt.plot(phi_values, x6, label='Legislator 6')
+plt.plot(phi_values, x7, label='Legislator 7')
+plt.plot(phi_values, x8, label='Legislator 8')
+plt.plot(phi_values, x9, label='Legislator 9')
+plt.plot(phi_values, x10, label='Legislator 10')
+plt.plot(phi_values, x11, label='Legislator 11')
+plt.plot(phi_values, x12, label='Legislator 12')
+plt.plot(phi_values, x13, label='Legislator 13')
+plt.plot(phi_values, x14, label='Legislator 14')
+plt.plot(phi_values, x15, label='Legislator 15')
+plt.plot(phi_values, x16, label='Legislator 16')
+plt.plot(phi_values, x17, label='Legislator 17')
+plt.plot(phi_values, x18, label='Legislator 18')
+plt.plot(phi_values, x19, label='Legislator 19')
+plt.plot(phi_values, x20, label='Legislator 20')
+plt.plot(phi_values, x21, label='Legislator 21')
+plt.plot(phi_values, x22, label='Legislator 22')
+plt.plot(phi_values, x23, label='Legislator 23')
+plt.plot(phi_values, x24, label='Legislator 24')
+plt.plot(phi_values, x25, label='Legislator 25')
+plt.plot(phi_values, x26, label='Legislator 26')
+plt.plot(phi_values, x27, label='Legislator 27')
+plt.plot(phi_values, x28, label='Legislator 28')
+plt.plot(phi_values, x29, label='Legislator 29')
+plt.plot(phi_values, x30, label='Legislator 30')
+plt.xlabel(r'$\phi$')  
+plt.ylabel('Entry Value')
+plt.title('Modified Katz-Bonaich Centrality Measure vs. Importance of Connections')
+plt.grid(True)
+plt.show()
