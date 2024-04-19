@@ -1,14 +1,14 @@
-import numpy as np
-import pandas as pd
-from sympy import Matrix
-from scipy.optimize import minimize
-from scipy.special import comb, logsumexp
-import matplotlib.pyplot as plt
-import requests
-import pyreadr
-import os
-import tempfile
-from scipy.linalg import solve  
+import numpy as np                             #
+import pandas as pd                            #
+from sympy import Matrix                       #
+from scipy.optimize import minimize            #
+from scipy.special import comb, logsumexp      #
+import matplotlib.pyplot as plt                #
+import requests                                #
+import pyreadr                                 #
+import os                                      #
+import tempfile                                #
+from scipy.linalg import solve                 #
 
 np.random.seed(4862)
 
@@ -45,13 +45,14 @@ x28 = []
 x29 = []
 x30 = []
 
+# There is another more efficient way of doing this. Feel free to use whatever you want. 
 
 
 ############################################################################################################################################################################
 
 # Generating the constants and storing them 
 
-phi_values = np.linspace(0.1, 1.19, 100) 
+phi_values = np.linspace(0.1, 1.19, 60)    # The 60 here means that the interval (0.1, 1.19) will be divided into 60 different values of \psi. The higher this number the smoother the graph but the more computationally expensive the operation will be. 
 Psi = 0.10               
 X = 5.0                    # This is the budget of the interest groups which is used in the computation of the optimal transfers.
 q = 0.5                    # This is the value of q which is used in the computation of the pivotal probabilities. (q-rule).      
@@ -63,7 +64,7 @@ def phistar(phi):
     return 2 * Psi * phi
 
 
-# Number of Legislators. Depending on your computer this code will be able to run for a large n. 
+# Number of Legislators. Because I am looking at the 109th congress I have to set it to 429. 
 
 n = 429
 
