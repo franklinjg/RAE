@@ -271,7 +271,7 @@ for phi in phi_values:
     x10.append(b_M_array[299])
     x11.append(b_M_array[1])
     x12.append(b_M_array[147])
-    x13.append(b_M_array[299])
+    x13.append(b_M_array[291])
     x14.append(b_M_array[101])
     x15.append(b_M_array[121])
     x16.append(b_M_array[29])
