@@ -34,26 +34,8 @@ x17 = []
 x18 = []
 x19 = []
 x20 = []
-x21 = []
-x22 = []
-x23 = []
-x24 = []
-x25 = []
-x26 = []
-x27 = []
-x28 = []
-x29 = []
-x30 = []
-x31 = []
-x32 = []
-x33 = []
-x34 = []
-x35 = []
-x36 = []
-x37 = []
-x38 = []
-x39 = []
-x40 = []
+
+
 ############################################################################################################################################################################
 phi_values = np.linspace(0.1, 1.19, 10) 
 Psi = 0.10               
@@ -284,17 +266,26 @@ for phi in phi_values:
 
 
 
-# Let's generate 40 unique random indices from the range 1 to 429
-np.random.seed(4862)  # Set the seed for reproducibility
-random_indices = np.random.choice(range(429), size=40, replace=False)
-
-# Initialize lists to store the results for each legislator
-x = [[] for _ in range(40)]
-
-# Assuming b_M_array is already computed and available here
-# Append the centrality measure of randomly chosen legislators to their respective lists
-for i, idx in enumerate(random_indices):
-    x[i].append(b_M_array[idx])
+    x1.append(b_M_array[1])
+    x2.append(b_M_array[2])
+    x3.append(b_M_array[3])
+    x4.append(b_M_array[4])
+    x5.append(b_M_array[5])
+    x6.append(b_M_array[6])
+    x7.append(b_M_array[7])
+    x8.append(b_M_array[8])
+    x9.append(b_M_array[9])
+    x10.append(b_M_array[10])
+    x11.append(b_M_array[15])
+    x12.append(b_M_array[143])
+    x13.append(b_M_array[221])
+    x14.append(b_M_array[145])
+    x15.append(b_M_array[126])
+    x16.append(b_M_array[333])
+    x17.append(b_M_array[355])
+    x18.append(b_M_array[388])
+    x19.append(b_M_array[399])
+    x20.append(b_M_array[400])
 
    
 
@@ -310,36 +301,17 @@ plt.plot(phi_values, x7, label='Legislator 7')
 plt.plot(phi_values, x8, label='Legislator 8')
 plt.plot(phi_values, x9, label='Legislator 9')
 plt.plot(phi_values, x10, label='Legislator 10')
-plt.plot(phi_values, x11, label='Legislator 1')
-plt.plot(phi_values, x12, label='Legislator 2')
-plt.plot(phi_values, x13, label='Legislator 3')
-plt.plot(phi_values, x14, label='Legislator 4')
-plt.plot(phi_values, x15, label='Legislator 5')
-plt.plot(phi_values, x16, label='Legislator 6')
-plt.plot(phi_values, x17, label='Legislator 7')
-plt.plot(phi_values, x18, label='Legislator 8')
-plt.plot(phi_values, x19, label='Legislator 9')
-plt.plot(phi_values, x20, label='Legislator 10')
-plt.plot(phi_values, x21, label='Legislator 1')
-plt.plot(phi_values, x22, label='Legislator 2')
-plt.plot(phi_values, x23, label='Legislator 3')
-plt.plot(phi_values, x24, label='Legislator 4')
-plt.plot(phi_values, x25, label='Legislator 5')
-plt.plot(phi_values, x26, label='Legislator 6')
-plt.plot(phi_values, x27, label='Legislator 7')
-plt.plot(phi_values, x28, label='Legislator 8')
-plt.plot(phi_values, x29, label='Legislator 9')
-plt.plot(phi_values, x30, label='Legislator 10')
-plt.plot(phi_values, x31, label='Legislator 1')
-plt.plot(phi_values, x32, label='Legislator 2')
-plt.plot(phi_values, x33, label='Legislator 3')
-plt.plot(phi_values, x34, label='Legislator 4')
-plt.plot(phi_values, x35, label='Legislator 5')
-plt.plot(phi_values, x36, label='Legislator 6')
-plt.plot(phi_values, x37, label='Legislator 7')
-plt.plot(phi_values, x38, label='Legislator 8')
-plt.plot(phi_values, x39, label='Legislator 9')
-plt.plot(phi_values, x40, label='Legislator 10')
+plt.plot(phi_values, x11, label='Legislator 11')
+plt.plot(phi_values, x12, label='Legislator 12')
+plt.plot(phi_values, x13, label='Legislator 13')
+plt.plot(phi_values, x14, label='Legislator 14')
+plt.plot(phi_values, x15, label='Legislator 15')
+plt.plot(phi_values, x16, label='Legislator 16')
+plt.plot(phi_values, x17, label='Legislator 17')
+plt.plot(phi_values, x18, label='Legislator 18')
+plt.plot(phi_values, x19, label='Legislator 19')
+plt.plot(phi_values, x20, label='Legislator 20')
+
 plt.xlabel(r'$\phi$')  
 plt.ylabel('Entry Value')
 plt.title('Modified Katz-Bonaich Centrality Measure vs. Importance of Connections')
