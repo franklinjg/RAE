@@ -201,8 +201,8 @@ def solve_system(v, phi, Psi_values, Gn, pivotal_prob_func, tolerance=1e-6, max_
             pivotal_probs = pivotal_prob_func(x)
             x_new = np.empty(n)
             for i in range(n):
-                sum_gx = sum(Gn[i, j] * np.clip(1 - x[j], 1e-10, 1-1e-10) for j in range(n))
-                x_new[i] = np.clip(Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
+                sum_gx = sum(Gn[i, j] * np.clip(2 * x[j]- 1, 1e-10, 1-1e-10) for j in range(n))
+                x_new[i] = np.clip(q + Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
 
             if np.allclose(x, x_new, atol=tolerance):
                 results[Psi] = x_new
@@ -251,7 +251,7 @@ for Psi in Psi_values:
     phistar_value = phistar(Psi)  # Assuming phistar now only takes Psi, since phi is fixed
     
     # Calculate the matrix inside the brackets more efficiently
-    matrix_inside_brackets = I - (phistar_value * G_transpose + Psi * transposed_matrixJ @ V_diag))
+    matrix_inside_brackets = I - (phistar_value * G_transpose + (Psi * transposed_matrixJ) @ V_diag))
 
 # Solve the linear system Ax = b for x, where A is matrix_inside_brackets and b is ones_vector.
 # This method is preferred over directly computing the inverse of A (A^-1) and then multiplying by b (A^-1 * b)
