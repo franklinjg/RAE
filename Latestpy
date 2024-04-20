@@ -217,6 +217,9 @@ def solve_system(v, phi, Psi, Gn, pivotal_prob_func, tolerance=1e-6, max_iterati
             sum_gx = sum(Gn[i, j] * np.clip(2 * x[j] - 1, 1e-10, 1-1e-10) for j in range(n))
             x_new[i] = np.clip(q + Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
 
+
+
+
         # Checking for convergence
         if np.allclose(x, x_new, atol=tolerance):
             return x  # Converged
