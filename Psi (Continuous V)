@@ -115,21 +115,34 @@ else:
 
 ############################################################################################################################################################################
 
-# Function to generate an n x n diagonal matrix V and save the diagonal elements as v1, v2, ..., vn
-def generate_and_save_diagonal_matrix(n):
-    # Define the possible values for the diagonal elements
-    possible_values_diagonal = [-1, 1, 0.5, -0.5]
+def generate_and_save_diagonal_matrix(n, epsilon=0.01):
+    # Define the range for the diagonal elements
+    lower_bound = -1
+    upper_bound = 1
+
     V = np.zeros((n, n))
+
+    # Fill the diagonal elements of the matrix with random values that avoid zero
     for i in range(n):
-        V[i, i] = np.random.choice(possible_values_diagonal)
+        # Choose from two ranges: [-1, -epsilon] or [epsilon, 1]
+        if np.random.rand() > 0.5:
+            V[i, i] = np.random.uniform(epsilon, upper_bound)
+        else:
+            V[i, i] = np.random.uniform(lower_bound, -epsilon)
+
+    # Save the matrix with a name 'Vnxn.npy', where n is replaced with the actual size
     filename = f'V{n}.npy'
     np.save(filename, V)
+
+    # Extract and save the diagonal elements as v1, v2, ..., vn
     v_elements = np.diag(V)
     v_dict = {f'v{i+1}': v_elements[i] for i in range(n)}
-    return V, filename, v_dict, v_elements  # Return the diagonal elements as part of the output
 
-# Generate the matrix and get the diagonal values
-V, filename, v_dict, v_values = generate_and_save_diagonal_matrix(n)  # Now v_values is defined
+    # Return the matrix, the filename it was saved as, and the diagonal elements
+    return V, filename, v_dict
+
+V, filename, v_dict = generate_and_save_diagonal_matrix(n)
+
 
 
 # Iterate over each Psi value to compute matrices and check invertibility
