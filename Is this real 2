@@ -206,23 +206,20 @@ def calculate_pivotal_probabilities(x):
 
 def solve_system(v, phi, Psi, Gn, pivotal_prob_func, tolerance=1e-6, max_iterations=1000):
     n = len(v)
-    x = np.full(n, 0.5)  # Initial guess set to 0.5 for all elements.
-
+    x = np.full(n, 0.5)  # Initial guess for x values
     for iteration in range(max_iterations):
-        pivotal_probs = pivotal_prob_func(x)  # Calculate pivotal probabilities
+        pivotal_probs = pivotal_prob_func(x)
         x_new = np.empty(n)
         for i in range(n):
-            # Calculate the new x_i using the given formula
-            # Use np.clip to avoid overflow/underflow by ensuring values are within the (0,1) range
             sum_gx = sum(Gn[i, j] * np.clip(2 * x[j] - 1, 1e-10, 1-1e-10) for j in range(n))
-            x_new[i] = np.clip(q + Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
+            x_new[i] = np.clip(Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
 
-        # Checking for convergence
         if np.allclose(x, x_new, atol=tolerance):
-            return x  # Converged
-        x = x_new  # Update x for the next iteration
+            return x_new  # System has converged, return the result
+        x = x_new
 
-    raise ValueError("The system did not converge within the maximum number of iterations")
+    print(f"Did not converge for phi: {phi}")
+    return None  # If not converged, return None
 
 
 
