@@ -29,6 +29,9 @@ import requests
 import pyreadr
 import os
 import tempfile
+import numpy as np
+from scipy.linalg import solve  
+
 
 
 np.random.seed(4862)
@@ -244,23 +247,11 @@ def compute_jacobian(x, pivotal_prob_func, h=1e-5):
 
 
 v_values = np.array([v_dict[f'v{i+1}'] for i in range(n)])
-
-# Now we can call solve_system and compute_jacobian
 x_star = solve_system(v_values, phi, Psi, Gn, calculate_pivotal_probabilities)
 jacobian_matrix = compute_jacobian(x_star, calculate_pivotal_probabilities)
-
-#print("The pivotal probabilities are:", calculate_pivotal_probabilities(x_star))
-#print(jacobian_matrix)
-
-
 transposed_matrixJ = jacobian_matrix.T
-
-#print(transposed_matrixJ)
-
 ############################################################################################################################################################################
 
-import numpy as np
-from scipy.linalg import solve  # Use scipy.linalg.solve for more numerically stable solutions
 
 I = np.eye(n)  # Identity matrix of size n x n
 ones_vector = np.ones((n, 1))  # Vector of ones of size n x 1
@@ -305,6 +296,4 @@ s_optimal = result.x
 # Display the optimal transfers
 print("Optimal transfers vector s*:")
 print(s_optimal)
-print("Hello World")
 ###################################################################################################################################################################################
-
