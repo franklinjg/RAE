@@ -1,0 +1,343 @@
+import numpy as np
+import pandas as pd
+from sympy import Matrix
+from scipy.optimize import minimize
+from scipy.special import comb, logsumexp
+import matplotlib.pyplot as plt
+import requests
+import pyreadr
+import os
+import tempfile
+from scipy.linalg import solve  
+
+np.random.seed(4862)         # I use this seed throughout my code so if you want to replicate my results use this one. 
+
+
+# Arrays to store the results
+x1 = []
+x2 = []
+x3 = []
+x4 = []
+x5 = []
+x6 = []
+x7 = []
+x8 = []
+x9 = []
+x10 = []
+x11 = []
+x12 = []
+x13 = []
+x14 = []
+x15 = []
+x16 = []
+x17 = []
+x18 = []
+x19 = []
+x20 = []
+x21 = []
+x22 = []
+x23 = []
+x24 = []
+x25 = []
+x26 = []
+x27 = []
+x28 = []
+x29 = []
+x30 = []
+
+
+
+############################################################################################################################################################################
+
+# Generating the constants and storing them 
+
+phi = 0.20 
+Psi_values = np.arange(0.05, 0.14, 0.01)    # Making the interval smallers will give you the same graph (I tried it)            
+X = 5.0                                     # This is the budget of the interest groups which is used in the computation of the optimal transfers.
+q = 0.5                                     # This is the value of q which is used in the computation of the pivotal probabilities. (q-rule).      
+                                            # This is the value of phi* which is used in the computation of the Katz-Bonacich centrality vector.
+vmax = 1.0                                  # This is the maximum value of the diagonal elements of the matrix V.
+
+# Function to compute phistar for a given Psi
+def phistar(Psi):
+    return 2 * Psi * phi
+
+
+# Number of Legislators. 
+
+n = 429
+
+############################################################################################################################################################################
+
+
+def store_matrix_entries(matrix):
+    stored_entries = {}
+    n = matrix.shape[0]
+    for i in range(n):
+        for j in range(n):
+            identifier = f"g_{i+1}{j+1}"
+            stored_entries[identifier] = matrix[i, j]
+    return stored_entries
+
+# URL of the raw R data file on GitHub
+url = 'https://raw.githubusercontent.com/franklinjg/RAE/29da2338741e37a621442490179455c570402bf4/G_party.rda'
+
+# Make a request to get the content of the .rda file
+response = requests.get(url)
+if response.status_code == 200:
+    # Create a temporary file
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_file.write(response.content)
+        tmp_file_path = tmp_file.name
+
+    # Read the R data file from the temporary file
+    result = pyreadr.read_r(tmp_file_path)
+
+    # Optionally delete the temporary file if you're done with it
+    os.remove(tmp_file_path)
+
+    # Now you can use 'result' as a normal result object from pyreadr
+    print(result.keys())  # For example, to print the keys of the loaded R data
+
+    # Assuming 'G_party' is the key for the data in the .rda file
+    G_party = result['G_party']
+
+    # Extract the 429x429 block from the DataFrame and convert it to a numpy matrix
+    Gn = G_party.iloc[0:429, 0:429].values
+
+    # Transpose the numpy matrix G
+    G_transpose = Gn.T
+
+    # Storing matrix entries in a dictionary from the extracted block
+    entries_dict = store_matrix_entries(Gn)
+else:
+    print("Failed to fetch the file: Status code", response.status_code)
+
+############################################################################################################################################################################
+
+# Function to generate an n x n diagonal matrix V and save the diagonal elements as v1, v2, ..., vn
+def generate_and_save_diagonal_matrix(n):
+    # Define the possible values for the diagonal elements
+    possible_values_diagonal = [-1, 1, 0.5, -0.5]
+    V = np.zeros((n, n))
+    for i in range(n):
+        V[i, i] = np.random.choice(possible_values_diagonal)
+    filename = f'V{n}.npy'
+    np.save(filename, V)
+    v_elements = np.diag(V)
+    v_dict = {f'v{i+1}': v_elements[i] for i in range(n)}
+    return V, filename, v_dict, v_elements  # Return the diagonal elements as part of the output
+
+# Generate the matrix and get the diagonal values
+V, filename, v_dict, v_values = generate_and_save_diagonal_matrix(n)  # Now v_values is defined
+
+
+# Iterate over each Psi value to compute matrices and check invertibility
+for Psi in Psi_values:
+    # Step 1: Compute the matrix to invert using a fixed phi and current Psi
+    I = np.eye(n)  # Identity matrix of size nxn
+    phistar_value = phistar(Psi)  # Compute phistar for the current Psi
+    matrix_to_invert = I - phistar_value * Gn
+
+    # Step 2: Check if the matrix is invertible (determinant is not zero)
+    is_invertible = np.linalg.det(matrix_to_invert) != 0
+
+    # Step 3: If invertible, compute the inverse and the Katz-Bonacich vector
+    if is_invertible:
+        inverse_matrix = np.linalg.inv(matrix_to_invert)
+        # Step 4: Multiply the inverse by a vector of ones
+        katz_bonacich_vector = inverse_matrix.dot(np.ones(n))
+        # Step 5: Check if all elements of the resulting vector are positive
+        all_positive = np.all(katz_bonacich_vector > 0)
+    else:
+        all_positive = False  # If the matrix is not invertible, the assumption does not hold
+
+    # Result
+    assumption_2_holds = is_invertible and all_positive
+    print(f"Psi: {Psi}, Does Assumption 2 hold?: {assumption_2_holds}")
+
+
+############################################################################################################################################################################
+
+def check_inequality(Psi, vmax, phi, X):
+    value_inside = vmax + phi + np.log(2*X)
+    result = Psi * value_inside
+    print(f"For Psi = {Psi}, computed result: {result}")  
+    return result < 0.5
+
+# Loop over each Psi and check if the inequality holds
+for Psi in Psi_values:
+    inequality_holds = check_inequality(Psi, vmax, phi, X)
+    print(f"Does the inequality hold strictly for Psi = {Psi}? : {inequality_holds}")
+
+############################################################################################################################################################################
+
+# Function to calculate pivotal probabilities
+def calculate_pivotal_probabilities(x):
+    half_n = (len(x) - 1) // 2
+    pivotal_probs = np.zeros(len(x))
+    epsilon = 1e-10
+    log_comb = np.array([np.log(comb(len(x) - 1, j)) for j in range(half_n)])
+    
+    for i in range(len(x)):
+        others = np.concatenate((x[:i], x[i+1:]))
+        others = np.clip(others, epsilon, 1 - epsilon)
+        if i != len(x) - 1:
+            log_probs = log_comb + np.log(others[:half_n]) + np.log(1 - others[half_n:])
+        else:
+            log_probs = log_comb + np.log(others[:half_n]) + np.log(1 - others[half_n:])
+        pivotal_probs[i] = np.exp(logsumexp(log_probs))
+
+    return pivotal_probs / (2**(len(x) - 1))
+
+# Function to solve the system for each Psi
+def solve_system(v, phi, Psi_values, Gn, pivotal_prob_func, tolerance=1e-6, max_iterations=1000):
+    n = len(v)
+    results = {}
+    
+    for Psi in Psi_values:
+        x = np.full(n, 0.5)  # Initial guess for each Psi
+        for iteration in range(max_iterations):
+            pivotal_probs = pivotal_prob_func(x)
+            x_new = np.empty(n)
+            for i in range(n):
+                sum_gx = sum(Gn[i, j] * np.clip(2 * x[j]- 1, 1e-10, 1-1e-10) for j in range(n))
+                x_new[i] = np.clip(0.5 + Psi * (v[i] * pivotal_probs[i] + Psi * phi * sum_gx), 1e-10, 1-1e-10)
+
+            if np.allclose(x, x_new, atol=tolerance):
+                results[Psi] = x_new
+                break
+            x = x_new
+        else:
+            print(f"Did not converge for Psi: {Psi}")
+            results[Psi] = None
+
+    return results
+
+# Function to compute the Jacobian
+def compute_jacobian(x, pivotal_prob_func, h=1e-5):
+    n = len(x)
+    jacobian = np.zeros((n, n))
+    
+    for j in range(n):
+        x1 = x.copy()
+        x2 = x.copy()
+        x1[j] -= h / 2
+        x2[j] += h / 2
+        f1 = pivotal_prob_func(x1)
+        f2 = pivotal_prob_func(x2)
+        jacobian[:, j] = (f2 - f1) / h
+
+    return jacobian
+
+# Run the model for each Psi and compute Jacobians
+for Psi in Psi_values:
+    results = solve_system(v_values, phi, Psi_values, Gn, calculate_pivotal_probabilities)
+    if results[Psi] is not None:
+        jacobian_matrix = compute_jacobian(results[Psi], calculate_pivotal_probabilities)
+        transposed_matrixJ = jacobian_matrix.T  # Calculate the transpose of the Jacobian
+        
+
+############################################################################################################################################################################
+
+I = np.eye(n)  # Identity matrix of size n x n
+ones_vector = np.ones((n, 1))  # Vector of ones of size n x 1
+V_diag = np.diag(V)  # Diagonal elements of the matrix V
+
+
+# Loop over each Psi value
+for Psi in Psi_values:
+    # Calculate the value from the phistar function
+    phistar_value = phistar(Psi)  # Assuming phistar now only takes Psi, since phi is fixed
+    
+    # Calculate the matrix inside the brackets more efficiently
+    matrix_inside_brackets = I - (phistar_value * G_transpose + (Psi * transposed_matrixJ) @ V_diag)
+
+# Solve the linear system Ax = b for x, where A is matrix_inside_brackets and b is ones_vector.
+# This method is preferred over directly computing the inverse of A (A^-1) and then multiplying by b (A^-1 * b)
+# because it is more numerically stable and computationally efficient.
+# Directly inverting a matrix can lead to large numerical errors especially if the matrix is near singular or poorly conditioned.
+# The 'solve' function uses optimized algorithms (like LU decomposition) that are more robust to these issues, providing more accurate results.
+
+    # Solve the linear system instead of inverting the matrix directly for numerical stability
+    b_M = solve(matrix_inside_brackets, ones_vector)  # Solve the linear system
+
+    print(f"Psi: {Psi:.2f}, The Katz-Bonacich centrality vector b_M is:")
+    print(b_M)
+    b_M_array = b_M.flatten()  # Flatten the matrix to a 1D array if needed for further processing
+    print("Matrix as array:")
+    print(b_M_array)
+
+
+
+    # Store the entries
+    x1.append(b_M_array[15])
+    x2.append(b_M_array[143])
+    x3.append(b_M_array[221])
+    x4.append(b_M_array[145])
+    x5.append(b_M_array[126])
+    x6.append(b_M_array[23])
+    x7.append(b_M_array[333])
+    x8.append(b_M_array[3])
+    x9.append(b_M_array[410])
+    x10.append(b_M_array[299])
+    x11.append(b_M_array[1])
+    x12.append(b_M_array[147])
+    x13.append(b_M_array[291])
+    x14.append(b_M_array[101])
+    x15.append(b_M_array[121])
+    x16.append(b_M_array[29])
+    x17.append(b_M_array[397])
+    x18.append(b_M_array[9])
+    x19.append(b_M_array[421])
+    x20.append(b_M_array[234])
+    x21.append(b_M_array[55])
+    x22.append(b_M_array[66])
+    x23.append(b_M_array[77])
+    x24.append(b_M_array[99])
+    x25.append(b_M_array[88])
+    x26.append(b_M_array[148])
+    x27.append(b_M_array[111])
+    x28.append(b_M_array[222])
+    x29.append(b_M_array[332])
+    x30.append(b_M_array[402])
+  
+
+
+
+plt.figure(figsize=(10, 5))
+plt.plot(Psi_values, x1)
+plt.plot(Psi_values, x2)
+plt.plot(Psi_values, x3)
+plt.plot(Psi_values, x4)
+plt.plot(Psi_values, x5)
+plt.plot(Psi_values, x6)
+plt.plot(Psi_values, x7)
+plt.plot(Psi_values, x8)
+plt.plot(Psi_values, x9)
+plt.plot(Psi_values, x10)
+plt.plot(Psi_values, x11)
+plt.plot(Psi_values, x12)
+plt.plot(Psi_values, x13)
+plt.plot(Psi_values, x14)
+plt.plot(Psi_values, x15)
+plt.plot(Psi_values, x16)
+plt.plot(Psi_values, x17)
+plt.plot(Psi_values, x18)
+plt.plot(Psi_values, x19)
+plt.plot(Psi_values, x20)
+plt.plot(Psi_values, x21)
+plt.plot(Psi_values, x22)
+plt.plot(Psi_values, x23)
+plt.plot(Psi_values, x24)
+plt.plot(Psi_values, x25)
+plt.plot(Psi_values, x26)
+plt.plot(Psi_values, x27)
+plt.plot(Psi_values, x28)
+plt.plot(Psi_values, x29)
+plt.plot(Psi_values, x30)
+plt.xlabel(r'$\Psi$')                                                   # Here goes the x-axis lable
+plt.ylabel('Modified Katz-Bonaich Centrality Measure')                  # Here goes the y-axis lable
+plt.title('Modified Katz-Bonacich Centrality Measure vs. Uncertainty')  # Here goes the title 
+plt.grid(True)
+plt.show()
