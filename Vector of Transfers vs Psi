@@ -15,36 +15,7 @@ np.random.seed(4862)
 
 
 # Arrays to store the results
-x1 = []
-x2 = []
-x3 = []
-x4 = []
-x5 = []
-x6 = []
-x7 = []
-x8 = []
-x9 = []
-x10 = []
-x11 = []
-x12 = []
-x13 = []
-x14 = []
-x15 = []
-x16 = []
-x17 = []
-x18 = []
-x19 = []
-x20 = []
-x21 = []
-x22 = []
-x23 = []
-x24 = []
-x25 = []
-x26 = []
-x27 = []
-x28 = []
-x29 = []
-x30 = []
+x_entries = {i: [] for i in range(30)}
 
 
 
@@ -72,8 +43,6 @@ n = 429
 ############################################################################################################################################################################
 
 
-# Arrays to store the results
-x_entries = {i: [] for i in [15, 143, 221, 145, 126, 23, 333, 3, 410, 299]}
 
 def store_matrix_entries(matrix):
     stored_entries = {}
@@ -250,33 +219,18 @@ ones_vector = np.ones((n, 1))  # Vector of ones of size n x 1
 V_diag = np.diag(V)  # Diagonal elements of the matrix V
 
 
-# Loop over each Psi value
 for Psi in Psi_values:
-    # Calculate the value from the phistar function
-    phistar_value = phistar(Psi)  # Assuming phistar now only takes Psi, since phi is fixed
-    
-    # Calculate the matrix inside the brackets more efficiently
+    phistar_value = phistar(Psi)
     matrix_inside_brackets = I - (phistar_value * G_transpose + (Psi * transposed_matrixJ) @ V_diag)
+    if np.linalg.det(matrix_inside_brackets) != 0:
+        b_M = solve(matrix_inside_brackets, ones_vector)
+        b_M_array = b_M.flatten()
+        print(f"Psi: {Psi:.2f}, The Katz-Bonacich centrality vector b_M is:")
+        print(b_M)
+        # Additional processing here
+    else:
+        print(f"Matrix not invertible for Psi = {Psi}")
 
-# Solve the linear system Ax = b for x, where A is matrix_inside_brackets and b is ones_vector.
-# This method is preferred over directly computing the inverse of A (A^-1) and then multiplying by b (A^-1 * b)
-# because it is more numerically stable and computationally efficient.
-# Directly inverting a matrix can lead to large numerical errors especially if the matrix is near singular or poorly conditioned.
-# The 'solve' function uses optimized algorithms (like LU decomposition) that are more robust to these issues, providing more accurate results.
-
-    # Solve the linear system instead of inverting the matrix directly for numerical stability
-    b_M = solve(matrix_inside_brackets, ones_vector)  # Solve the linear system
-
-    print(f"Psi: {Psi:.2f}, The Katz-Bonacich centrality vector b_M is:")
-    print(b_M)
-    b_M_array = b_M.flatten()  # Flatten the matrix to a 1D array if needed for further processing
-    print("Matrix as array:")
-    print(b_M_array)
-
-
-
-# Assume phi, X, V, Gn, n, and Psi_values are already defined above
-# Also assume that the necessary variables for plotting like x_entries are defined
 
 # Define the objective function to be maximized (negative because minimize() finds the minimum)
 def objective_function(s, b_M):
@@ -284,6 +238,9 @@ def objective_function(s, b_M):
 
 # Initialize a dictionary to store the optimal transfers for each Psi for plotting
 optimal_transfers_for_plotting = {i: [] for i in range(n)}  # This assumes you want to plot all n entries
+
+# Arrays to store the specific entries' transfers
+x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30 = ([] for _ in range(30))
 
 # Loop over each Psi value to calculate b_M and solve the maximization problem
 for Psi in Psi_values:
@@ -295,6 +252,38 @@ for Psi in Psi_values:
         # Solve the linear system instead of inverting the matrix directly for numerical stability
         b_M = solve(matrix_inside_brackets, np.ones(n))  # Solve the linear system
         b_M_array = b_M.flatten()  # Flatten the matrix to a 1D array
+
+        # Store the entries for the specific indexes
+        x1.append(b_M_array[15])
+        x2.append(b_M_array[143])
+        x3.append(b_M_array[221])
+        x4.append(b_M_array[145])
+        x5.append(b_M_array[126])
+        x6.append(b_M_array[23])
+        x7.append(b_M_array[333])
+        x8.append(b_M_array[3])
+        x9.append(b_M_array[410])
+        x10.append(b_M_array[299])
+        x11.append(b_M_array[1])
+        x12.append(b_M_array[147])
+        x13.append(b_M_array[291])
+        x14.append(b_M_array[101])
+        x15.append(b_M_array[121])
+        x16.append(b_M_array[29])
+        x17.append(b_M_array[397])
+        x18.append(b_M_array[9])
+        x19.append(b_M_array[421])
+        x20.append(b_M_array[234])
+        x21.append(b_M_array[55])
+        x22.append(b_M_array[66])
+        x23.append(b_M_array[77])
+        x24.append(b_M_array[99])
+        x25.append(b_M_array[88])
+        x26.append(b_M_array[148])
+        x27.append(b_M_array[111])
+        x28.append(b_M_array[222])
+        x29.append(b_M_array[332])
+        x30.append(b_M_array[402])
 
         # Now that we have b_M_array for this Psi, we can run the optimization
         constraints = {'type': 'eq', 'fun': lambda s: np.sum(s) - X}
@@ -314,10 +303,12 @@ for Psi in Psi_values:
     else:
         print(f"Matrix not invertible for Psi = {Psi}")
 
+# Now plot the results for the specific entries
 plt.figure(figsize=(10, 5))
-for idx in x_entries.keys():
-    plt.plot(Psi_values, [optimal_transfers_for_plotting[idx][i] for i, Psi in enumerate(Psi_values)], label=f'Entry {idx + 1}')
+for i, x in enumerate([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30], 1):
+    plt.plot(Psi_values, x, label=f'Entry {i}')
 plt.xlabel(r'$\Psi$')
-plt.ylabel('Optimal Transfer')
-plt.title('Optimal Transfers vs. Uncertainty')
+plt.ylabel('Katz-Bonacich Centrality')
+plt.title('Katz-Bonacich Centrality vs. Psi')
+plt.legend()
 plt.show()
