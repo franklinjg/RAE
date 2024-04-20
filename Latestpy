@@ -214,7 +214,7 @@ def solve_system(v, phi, Psi, Gn, pivotal_prob_func, tolerance=1e-6, max_iterati
         for i in range(n):
             # Calculate the new x_i using the given formula
             # Use np.clip to avoid overflow/underflow by ensuring values are within the (0,1) range
-            sum_gx = sum(Gn[i, j] * np.clip(1 - x[j], 1e-10, 1-1e-10) for j in range(n))
+            sum_gx = sum(Gn[i, j] * np.clip(2 * x[j] - 1, 1e-10, 1-1e-10) for j in range(n))
             x_new[i] = np.clip(q + Psi * v[i] * pivotal_probs[i] + Psi * phi * sum_gx, 1e-10, 1-1e-10)
 
         # Checking for convergence
@@ -270,7 +270,7 @@ ones_vector = np.ones((n, 1))  # Vector of ones of size n x 1
 V_diag = np.diag(V)  # Diagonal elements of the matrix V
 
 # Calculate the matrix inside the brackets more efficiently
-matrix_inside_brackets = I - (phistar * G_transpose + Psi * np.diag(transposed_matrixJ - V_diag))
+matrix_inside_brackets = I - (phistar * G_transpose + Psi * transposed_matrixJ @ V_diag)
 
 # Solve the linear system instead of inverting the matrix directly for numerical stability
 b_M = solve(matrix_inside_brackets, ones_vector)  # Solve the linear system
