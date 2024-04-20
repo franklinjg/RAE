@@ -14,10 +14,6 @@ from scipy.linalg import solve
 np.random.seed(4862)
 
 
-# Arrays to store the results
-x_entries = {i: [] for i in range(30)}
-
-
 
 
 ############################################################################################################################################################################
@@ -30,6 +26,20 @@ X = 5.0                    # This is the budget of the interest groups which is 
 q = 0.5                    # This is the value of q which is used in the computation of the pivotal probabilities. (q-rule).      
                         # This is the value of phi* which is used in the computation of the Katz-Bonacich centrality vector.
 vmax = 1.0                 # This is the maximum value of the diagonal elements of the matrix V.
+
+
+
+
+# Index mapping for specific entries
+indices = [15, 143, 221, 145, 126, 23, 333, 3, 410, 299,
+           1, 147, 291, 101, 121, 29, 397, 9, 421, 234,
+           55, 66, 77, 99, 88, 148, 111, 222, 332, 402]
+
+# Arrays to store the specific entries' transfers
+x_entries = {index: [] for index in indices}
+
+
+
 
 # Function to compute phistar for a given Psi
 def phistar(Psi):
@@ -217,13 +227,6 @@ I = np.eye(n)  # Identity matrix of size n x n
 ones_vector = np.ones((n, 1))  # Vector of ones of size n x 1
 V_diag = np.diag(V)  # Diagonal elements of the matrix V
 
-# Index mapping for specific entries
-indices = [15, 143, 221, 145, 126, 23, 333, 3, 410, 299,
-           1, 147, 291, 101, 121, 29, 397, 9, 421, 234,
-           55, 66, 77, 99, 88, 148, 111, 222, 332, 402]
-
-# Arrays to store the specific entries' transfers
-x_entries = {index: [] for index in indices}
 
 for Psi in Psi_values:
     phistar_value = phistar(Psi)
