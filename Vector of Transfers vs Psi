@@ -264,5 +264,4 @@ for index in indices:
 plt.xlabel(r'$\Psi$')
 plt.ylabel('Optimal Transfer')
 plt.title('Optimal Transfers vs. Psi')
-plt.legend()
 plt.show()
