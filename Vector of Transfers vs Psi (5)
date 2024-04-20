@@ -50,7 +50,7 @@ x30 = []
 # Generating the constants and storing them 
 
 phi = 0.20 
-Psi_values = np.arange(0.04, 0.14, 0.01)                
+Psi_values = np.arange(0.05, 0.14, 0.01)                
 X = 5.0                    # This is the budget of the interest groups which is used in the computation of the optimal transfers.
 q = 0.5                    # This is the value of q which is used in the computation of the pivotal probabilities. (q-rule).      
                         # This is the value of phi* which is used in the computation of the Katz-Bonacich centrality vector.
