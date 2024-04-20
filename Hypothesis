@@ -30,6 +30,8 @@ import pyreadr
 import os
 import tempfile
 import statsmodels.api as sm
+from scipy.linalg import solve 
+
 
 np.random.seed(4862)
 
@@ -262,8 +264,6 @@ transposed_matrixJ = jacobian_matrix.T
 
 ############################################################################################################################################################################
 
-import numpy as np
-from scipy.linalg import solve  # Use scipy.linalg.solve for more numerically stable solutions
 
 I = np.eye(n)  # Identity matrix of size n x n
 ones_vector = np.ones((n, 1))  # Vector of ones of size n x 1
