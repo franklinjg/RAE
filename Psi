@@ -251,7 +251,7 @@ for Psi in Psi_values:
     phistar_value = phistar(Psi)  # Assuming phistar now only takes Psi, since phi is fixed
     
     # Calculate the matrix inside the brackets more efficiently
-    matrix_inside_brackets = I - (phistar_value * G_transpose + (Psi * transposed_matrixJ) @ V_diag))
+    matrix_inside_brackets = I - (phistar_value * G_transpose + (Psi * transposed_matrixJ) @ V_diag)
 
 # Solve the linear system Ax = b for x, where A is matrix_inside_brackets and b is ones_vector.
 # This method is preferred over directly computing the inverse of A (A^-1) and then multiplying by b (A^-1 * b)
