@@ -10,6 +10,7 @@ import os
 import tempfile
 from scipy.linalg import solve  
 
+
 np.random.seed(4862)
 
 
@@ -271,13 +272,6 @@ for phi in phi_values:
     print("Matrix as array:")
     print(b_M_array)
 
-
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import minimize
-from scipy.linalg import solve
 
 # Assume phi, X, V, Gn, n, and Psi_values are already defined above
 # Also assume that the necessary variables for plotting like x_entries are defined
