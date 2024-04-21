@@ -162,7 +162,7 @@ for index in indices:
     plt.plot(Psi_values, x_entries[index], label=f'Entry {index+1}')
 
 plt.xlabel(r'$\Psi$')
-plt.ylabel('Katz-Bonacich Centrality at Specified Entries')
-plt.title('Katz-Bonacich Centrality vs. Psi')
+plt.ylabel('Katz-Bonacich Centrality')
+plt.title('Katz-Bonacich Centrality vs. Uncertainty')
 plt.grid(True)
 plt.show()
