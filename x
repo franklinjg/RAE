@@ -1,0 +1,343 @@
+import subprocess
+import sys
+
+def install(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+# List of packages and their import commands
+packages = {
+    "numpy": "import numpy as np",
+    "pandas": "import pandas as pd",
+    "sympy": "from sympy import Matrix",
+    "scipy": "from scipy.optimize import minimize",
+    "scipy": "from scipy.special import comb, logsumexp",
+    "matplotlib": "import matplotlib.pyplot as plt",
+    "requests": "import requests",
+    "pyreadr": "import pyreadr",
+    "os": "import os",
+    "tempfile": "import tempfile",
+    "scipy": "from scipy.linalg import solve"
+}
+
+# Install and import each package
+for package, import_command in packages.items():
+    try:
+        exec(import_command)
+    except ImportError:
+        install(package)
+        exec(import_command)
+
+# Confirm the imports (optional)
+print("All packages are installed and imported successfully.")
+
+
+np.random.seed(4862)
+
+
+# Arrays to store the results
+x1 = []
+x2 = []
+x3 = []
+x4 = []
+x5 = []
+x6 = []
+x7 = []
+x8 = []
+x9 = []
+x10 = []
+x11 = []
+x12 = []
+x13 = []
+x14 = []
+x15 = []
+x16 = []
+x17 = []
+x18 = []
+x19 = []
+x20 = []
+x21 = []
+x22 = []
+x23 = []
+x24 = []
+x25 = []
+x26 = []
+x27 = []
+x28 = []
+x29 = []
+x30 = []
+
+############################################################################################################################################################################
+
+# Generating the constants and storing them 
+
+phi_values = np.linspace(0.1, 0.98, 20) 
+Psi = 0.10               
+X = 5.0                    # This is the budget of the interest groups which is used in the computation of the optimal transfers.
+q = 0.5                    # This is the value of q which is used in the computation of the pivotal probabilities. (q-rule).      
+                        # This is the value of phi* which is used in the computation of the Katz-Bonacich centrality vector.
+vmax = 1.0                 # This is the maximum value of the diagonal elements of the matrix V.
+
+# Function to compute phistar for a given phi
+def phistar(phi):
+    return 2 * Psi * phi
+
+
+# Number of Legislators. Depending on your computer this code will be able to run for a large n. 
+
+n = 429
+
+############################################################################################################################################################################
+
+
+# Arrays to store the results
+x_entries = {i: [] for i in [15, 143, 221, 145, 126, 23, 333, 3, 410, 299, 1, 147, 291, 101, 121, 29, 397, 9, 421, 234, 55, 66, 77, 99, 88, 148, 111, 222, 332, 402]}
+
+def store_matrix_entries(matrix):
+    stored_entries = {}
+    n = matrix.shape[0]
+    for i in range(n):
+        for j in range(n):
+            identifier = f"g_{i+1}{j+1}"
+            stored_entries[identifier] = matrix[i, j]
+    return stored_entries
+
+# URL of the raw R data file on GitHub
+url = 'https://raw.githubusercontent.com/franklinjg/RAE/29da2338741e37a621442490179455c570402bf4/G_party.rda'
+
+# Make a request to get the content of the .rda file
+response = requests.get(url)
+if response.status_code == 200:
+    # Create a temporary file
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_file.write(response.content)
+        tmp_file_path = tmp_file.name
+
+    # Read the R data file from the temporary file
+    result = pyreadr.read_r(tmp_file_path)
+
+    # Optionally delete the temporary file if you're done with it
+    os.remove(tmp_file_path)
+
+    # Now you can use 'result' as a normal result object from pyreadr
+    print(result.keys())  # For example, to print the keys of the loaded R data
+
+    # Assuming 'G_party' is the key for the data in the .rda file
+    G_party = result['G_party']
+
+    # Extract the 429x429 block from the DataFrame and convert it to a numpy matrix
+    Gn = G_party.iloc[0:429, 0:429].values
+
+    # Transpose the numpy matrix G
+    G_transpose = Gn.T
+
+    # Storing matrix entries in a dictionary from the extracted block
+    entries_dict = store_matrix_entries(Gn)
+else:
+    print("Failed to fetch the file: Status code", response.status_code)
+
+############################################################################################################################################################################
+
+# Function to generate an n x n diagonal matrix V and save the diagonal elements
+def generate_and_save_diagonal_matrix(n):
+    # Define the range of possible values for the diagonal elements
+    possible_values_diagonal = [-1, 1, 0.5, -0.5]
+    # Initialise a zero matrix of size n x n
+    V = np.zeros((n, n))
+    # Assign random values from the defined range to the diagonal elements
+    for i in range(n):
+        V[i, i] = np.random.choice(possible_values_diagonal)
+    # Define the filename for saving the matrix
+    filename = f'V{n}.npy'
+    # Save the matrix to a numpy binary file
+    np.save(filename, V)
+    # Extract the diagonal elements and store them in a dictionary
+    v_elements = np.diag(V)
+    v_dict = {f'v{i+1}': v_elements[i] for i in range(n)}
+    # Return the matrix, file name, dictionary of diagonal values, and the list of diagonal values
+    return V, filename, v_dict, v_elements
+
+# Generate the matrix and retrieve the diagonal values
+V, filename, v_dict, v_values = generate_and_save_diagonal_matrix(n)  # Ensure v_values are now defined and accessible
+
+
+
+# Iterate over each phi value to compute matrices and check invertibility
+for phi in phi_values:
+    # Step 1: Compute the matrix to invert using a fixed phi and current phi
+    I = np.eye(n)  # Identity matrix of size nxn
+    phistar_value = phistar(phi)  # Compute phistar for the current phi
+    matrix_to_invert = I - phistar_value * Gn
+
+    # Step 2: Check if the matrix is invertible (determinant is not zero)
+    is_invertible = np.linalg.det(matrix_to_invert) != 0
+
+    # Step 3: If invertible, compute the inverse and the Katz-Bonacich vector
+    if is_invertible:
+        inverse_matrix = np.linalg.inv(matrix_to_invert)
+        # Step 4: Multiply the inverse by a vector of ones
+        katz_bonacich_vector = inverse_matrix.dot(np.ones(n))
+        # Step 5: Check if all elements of the resulting vector are positive
+        all_positive = np.all(katz_bonacich_vector > 0)
+    else:
+        all_positive = False  # If the matrix is not invertible, the assumption does not hold
+
+    # Result
+    assumption_2_holds = is_invertible and all_positive
+    print(f"phi: {phi}, Does Assumption 2 hold?: {assumption_2_holds}")
+
+
+
+############################################################################################################################################################################
+
+def check_inequality(Psi, vmax, phi, X):
+    value_inside = vmax + phi + np.log(2*X)
+    result = Psi * value_inside
+    print(f"For Psi = {phi}, computed result: {result}")  
+    return result < 0.5
+
+# Loop over each phi and check if the inequality holds
+for phi in phi_values:
+    inequality_holds = check_inequality(Psi, vmax, phi, X)
+    print(f"Does the inequality hold strictly for phi = {phi}? : {inequality_holds}")
+
+############################################################################################################################################################################
+
+# Function to calculate pivotal probabilities using the combinatorial approach
+def calculate_pivotal_probabilities(x):
+    # Calculate half the size of x, used for combinatorial indices
+    half_n = (len(x) - 1) // 2
+    # Initialise an array of zeros for storing pivotal probabilities
+    pivotal_probs = np.zeros(len(x))
+    # Define a small number to prevent division by zero or log of zero
+    epsilon = 1e-10
+    # Pre-calculate logarithms of combinatorial numbers for efficiency
+    log_comb = np.array([np.log(comb(len(x) - 1, j)) for j in range(half_n)])
+    
+    # Iterate over each element to compute its pivotal probability
+    for i in range(len(x)):
+        # Exclude the current element to form 'others'
+        others = np.concatenate((x[:i], x[i+1:]))
+        # Ensure others' values are within bounds to prevent computational errors
+        others = np.clip(others, epsilon, 1 - epsilon)
+        # Combine combinatorial log probabilities with log probabilities of others
+        if i != len(x) - 1:
+            log_probs = log_comb + np.log(others[:half_n]) + np.log(1 - others[half_n:])
+        else:
+            log_probs = log_comb + np.log(others[:half_n]) + np.log(1 - others[half_n:])
+        # Calculate pivotal probability by summing exponentials of log probabilities
+        pivotal_probs[i] = np.exp(logsumexp(log_probs))
+
+    # Normalise probabilities to ensure they are proportional within a binary decision model
+    return pivotal_probs / (2**(len(x) - 1))
+
+
+# Function to solve the system for each phi
+def solve_system(v, phi_values, Psi, Gn, pivotal_prob_func, tolerance=1e-6, max_iterations=1000):
+    n = len(v)
+    results = {}
+    
+    for phi in phi_values:
+        x = np.full(n, 0.5)  # Initial guess 
+        for iteration in range(max_iterations):
+            pivotal_probs = pivotal_prob_func(x)
+            x_new = np.empty(n)
+            for i in range(n):
+                sum_gx = sum(Gn[i, j] * np.clip(2 * x[j]  - 1, 1e-10, 1-1e-10) for j in range(n))
+                x_new[i] = np.clip(0.5 + Psi * (v[i] * pivotal_probs[i] + Psi * phi * sum_gx), 1e-10, 1-1e-10)
+
+            if np.allclose(x, x_new, atol=tolerance):
+                results[phi] = x_new
+                break
+            x = x_new
+        else:
+            print(f"Did not converge for phi: {phi}")
+            results[phi] = None
+
+    return results
+
+# Function to compute the Jacobian matrix for a given vector using a finite difference method
+def compute_jacobian(x, pivotal_prob_func, h=1e-5):
+    # Determine the length of vector x
+    n = len(x)
+    # Initialise the Jacobian matrix with zeros
+    jacobian = np.zeros((n, n))
+    
+    # Compute the Jacobian matrix by finite differences
+    for j in range(n):
+        # Create perturbed vectors around the current component
+        x1 = x.copy()
+        x2 = x.copy()
+        x1[j] -= h / 2
+        x2[j] += h / 2
+        
+        # Evaluate the pivotal probability function at these perturbed vectors
+        f1 = pivotal_prob_func(x1)
+        f2 = pivotal_prob_func(x2)
+        
+        # Calculate the derivative with respect to the j-th variable
+        jacobian[:, j] = (f2 - f1) / h
+
+    return jacobian
+
+
+# Run the model for each phi and compute Jacobians
+for phi in phi_values:
+    results = solve_system(v_values, phi_values, Psi, Gn, calculate_pivotal_probabilities)
+    if results[phi] is not None:
+        jacobian_matrix = compute_jacobian(results[phi], calculate_pivotal_probabilities)
+        transposed_matrixJ = jacobian_matrix.T  # Calculate the transpose of the Jacobian
+        
+
+
+############################################################################################################################################################################
+
+
+I = np.eye(n)  # Identity matrix of size n x n
+ones_vector = np.ones((n, 1))  # Vector of ones of size n x 1
+
+# Initialize a dictionary to store the optimal transfers for each phi
+optimal_transfers_for_plotting = {i: [] for i in range(n)}
+
+# Define the objective function to be maximized (negative because minimize() finds the minimum)
+def objective_function(s, b_M):
+    return -np.sum(b_M * np.log(s))
+
+# Loop over each phi value
+for phi in phi_values:
+    phistar_value = phistar(phi)  # Compute phistar for the current phi
+    matrix_inside_brackets = I - (phistar_value * G_transpose + Psi * transposed_matrixJ @ V)
+
+    # Check if the matrix is invertible (determinant is not zero)
+    if np.linalg.det(matrix_inside_brackets) != 0:
+        b_M = solve(matrix_inside_brackets, ones_vector)  # Solve the linear system
+        b_M_array = b_M.flatten()  # Flatten the matrix to a 1D array
+
+        print(f"phi: {phi:.2f}, The Katz-Bonacich centrality vector b_M is:")
+        print(b_M)
+
+        # Now that we have b_M_array for this phi, we can run the optimization
+        constraints = {'type': 'eq', 'fun': lambda s: np.sum(s) - X}
+        bounds = [(1e-5, None)] * len(b_M_array)
+        initial_s = np.full(len(b_M_array), X / len(b_M_array))
+
+        result = minimize(objective_function, initial_s, args=(b_M_array), bounds=bounds, constraints=constraints)
+        if result.success:
+            # Store the optimal vector of transfers for this phi for plotting
+            s_optimal = result.x
+            for i in range(n):
+                optimal_transfers_for_plotting[i].append(s_optimal[i])
+        else:
+            print(f"Optimization failed for phi = {phi}")
+    else:
+        print(f"Matrix not invertible for phi = {phi}")
+
+# If needed, plotting or further data handling can be done here with `optimal_transfers_for_plotting`
+
+
+plt.figure(figsize=(10, 5))
+for idx in x_entries.keys():
+    plt.plot(phi_values, [optimal_transfers_for_plotting[idx][i] for i, phi in enumerate(phi_values)], label=f'Entry {idx + 1}')
+plt.xlabel(r'$\phi$')
+plt.ylabel('Optimal Transfer')
+plt.title('Optimal Transfers vs. Scaling Factor')
+plt.show()
