@@ -9,7 +9,7 @@ required_packages = {
     'numpy': 'import numpy as np',
     'pandas': 'import pandas as pd',
     'sympy': 'from sympy import Matrix',
-    'scipy': 'from scipy.optimize import minimise; from scipy.special import comb, logsumexp; from scipy.linalg import solve',
+    'scipy': 'from scipy.optimize import minimize; from scipy.special import comb, logsumexp; from scipy.linalg import solve',
     'matplotlib': 'import matplotlib.pyplot as plt',
     'requests': 'import requests',
     'pyreadr': 'import pyreadr',
