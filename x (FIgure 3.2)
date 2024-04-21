@@ -4,28 +4,26 @@ import sys
 def install(package):
     subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
-# List of packages and their import commands
-packages = {
-    "numpy": "import numpy as np",
-    "pandas": "import pandas as pd",
-    "sympy": "from sympy import Matrix",
-    "scipy": "from scipy.optimize import minimize",
-    "scipy": "from scipy.special import comb, logsumexp",
-    "matplotlib": "import matplotlib.pyplot as plt",
-    "requests": "import requests",
-    "pyreadr": "import pyreadr",
-    "os": "import os",
-    "tempfile": "import tempfile",
-    "scipy": "from scipy.linalg import solve"
+# List of packages to import
+required_packages = {
+    'numpy': 'import numpy as np',
+    'pandas': 'import pandas as pd',
+    'sympy': 'from sympy import Matrix',
+    'scipy': 'from scipy.optimize import minimise; from scipy.special import comb, logsumexp; from scipy.linalg import solve',
+    'matplotlib': 'import matplotlib.pyplot as plt',
+    'requests': 'import requests',
+    'pyreadr': 'import pyreadr',
+    'os': 'import os',
+    'tempfile': 'import tempfile'
 }
 
-# Install and import each package
-for package, import_command in packages.items():
+# Check and install missing packages, then execute import commands
+for package, import_command in required_packages.items():
     try:
         exec(import_command)
     except ImportError:
-        install(package)
-        exec(import_command)
+        install(package.split('.')[0])  # Install the base package if not already installed
+        exec(import_command)  # Try to import again after installing
 
 # Confirm the imports (optional)
 print("All packages are installed and imported successfully.")
